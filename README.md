@@ -1,4 +1,4 @@
-# HOL Codex Plugin Scanner GitHub Action [![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Action-blue?logo=github)](https://github.com/marketplace/actions/hol-codex-plugin-scanner) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
+# HOL Codex Plugin Scanner GitHub Action [![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Action-blue?logo=github)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
 | ![](https://raw.githubusercontent.com/hashgraph-online/standards-sdk-py/main/Hashgraph-Online.png) | **The default CI gate for Codex plugins — lint locally, verify in CI, and ship publish-ready bundles.** |
 | :---: | :--- |
@@ -43,7 +43,7 @@ jobs:
       security-events: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Validate Codex plugin
         uses: your-org/hol-codex-plugin-scanner-action@v1
@@ -161,7 +161,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Scan plugin and submit if eligible
         id: scan

@@ -1,4 +1,4 @@
-name: "Codex Plugin Quality Gate"
+name: "HOL Codex Plugin Scanner"
 description: "Default CI gate for Codex plugins: lint/verify publish-readiness, enforce quality thresholds, and emit artifacts."
 author: "HOL"
 
