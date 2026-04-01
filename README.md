@@ -1,6 +1,7 @@
-# codex-plugin-scanner GitHub Action
+# HOL Codex Plugin Scanner GitHub Action [![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Action-blue?logo=github)](https://github.com/marketplace/actions/hol-codex-plugin-scanner) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
-**The default CI gate for Codex plugins — lint locally, verify in CI, and ship publish-ready bundles.**
+| ![](https://raw.githubusercontent.com/hashgraph-online/standards-sdk-py/main/Hashgraph-Online.png) | **The default CI gate for Codex plugins — lint locally, verify in CI, and ship publish-ready bundles.** |
+| :---: | :--- |
 
 Use this action after `$plugin-creator` and before publishing, review, or distribution. It catches packaging, security, and publish-readiness issues early, then emits machine-readable outputs you can use in PR gates, code scanning, and submission workflows.
 
