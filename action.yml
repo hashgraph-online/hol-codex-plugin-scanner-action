@@ -1,10 +1,10 @@
-name: "HOL Codex Plugin Scanner"
-description: "Scan a Codex plugin directory for security, publishability, and best practices. Scores from 0-100."
+name: "Codex Plugin Quality Gate"
+description: "Default CI gate for Codex plugins: lint/verify publish-readiness, enforce quality thresholds, and emit artifacts."
 author: "HOL"
 
 inputs:
   plugin_dir:
-    description: "Path to the plugin directory to scan (default: repository root)"
+    description: "Path to the plugin directory to validate (default: repository root)"
     required: false
     default: "."
   format:
@@ -16,7 +16,7 @@ inputs:
     required: false
     default: ""
   min_score:
-    description: "Fail the job if the score is below this threshold (0-100)"
+    description: "Fail CI if the plugin score is below this threshold (0-100)"
     required: false
     default: "0"
   fail_on_severity:
@@ -36,7 +36,7 @@ inputs:
     required: false
     default: "false"
   submission_enabled:
-    description: "Open submission issues for awesome-list and registry automation when the plugin clears the submission threshold"
+    description: "Open submission issues for awesome-list/registry automation when plugin passes the submission threshold"
     required: false
     default: "false"
   submission_score_threshold:
@@ -102,7 +102,7 @@ runs:
       with:
         python-version: "3.12"
 
-    - name: Install scanner
+    - name: Install codex-plugin-scanner
       shell: bash
       run: |
         LOCAL_SOURCE=""
@@ -123,7 +123,7 @@ runs:
           pip install "cisco-ai-skill-scanner>=2.0.6,<3"
         fi
 
-    - name: Run scanner
+    - name: Run plugin quality gate
       id: scan
       shell: bash
       env:
