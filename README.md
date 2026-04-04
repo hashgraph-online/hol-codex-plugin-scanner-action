@@ -97,7 +97,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
         with:
           plugin_dir: "."
@@ -153,7 +153,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Scan plugin and submit if eligible
         id: scan
@@ -184,7 +184,7 @@ Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-
     output: scan-report.md
 
 - name: Comment PR
-  uses: actions/github-script@v8
+  uses: actions/github-script@v7
   with:
     script: |
       const fs = require('fs');
@@ -205,7 +205,7 @@ Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-
 - Configure `ACTION_REPO_TOKEN` in the source repository so `publish-action-repo.yml` can sync this root-ready bundle automatically.
 - Optionally set `ACTION_REPOSITORY` in the source repository if the target repository should not be `hashgraph-online/hol-codex-plugin-scanner-action`.
 
-## Source Of Truth
+## Source of Truth
 
 The source bundle for this action lives in the main scanner repository under `action/`. Release artifacts from that repository should export a root-ready action bundle for the dedicated Marketplace repository.
 
