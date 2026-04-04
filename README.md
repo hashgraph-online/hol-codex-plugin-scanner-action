@@ -1,4 +1,6 @@
-# HOL Codex Plugin Scanner GitHub Action [![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Action-blue?logo=github)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
+# HOL Codex Plugin Scanner GitHub Action
+
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub_Marketplace-HOL_Codex_Plugin_Scanner-blue?logo=github)](https://github.com/marketplace/actions/hol-codex-plugin-scanner-action) [![GitHub Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag&logo=github)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/LICENSE) [![Scanner Source](https://img.shields.io/badge/source-codex--plugin--scanner-0A66C2?logo=github)](https://github.com/hashgraph-online/codex-plugin-scanner)
 
 | ![](https://raw.githubusercontent.com/hashgraph-online/standards-sdk-py/main/Hashgraph-Online.png) | **The default CI gate for Codex plugins — lint locally, verify in CI, and ship publish-ready bundles.** |
 | :---: | :--- |
@@ -46,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate Codex plugin
-        uses: your-org/hol-codex-plugin-scanner-action@v1
+        uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
         with:
           plugin_dir: "."
           min_score: 70
@@ -66,6 +68,7 @@ jobs:
 - Verifies install/runtime and publish-readiness surfaces.
 - Fails CI based on score and/or severity policy.
 - Emits report artifacts (`text`, `json`, `markdown`, `sarif`).
+- Uses the same scanner source of truth as the published `codex-plugin-scanner` package.
 - Optionally opens submission issues for awesome-list/registry workflows.
 
 ## Inputs
@@ -102,6 +105,12 @@ jobs:
 | `submission_issue_urls` | Comma-separated submission issue URLs |
 | `submission_issue_numbers` | Comma-separated submission issue numbers |
 
+## Marketplace and release notes
+
+- Marketplace listing: [HOL Codex Plugin Scanner](https://github.com/marketplace/actions/hol-codex-plugin-scanner-action)
+- Release notes: [GitHub Releases](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases)
+- Source scanner changelog: [codex-plugin-scanner releases](https://github.com/hashgraph-online/codex-plugin-scanner/releases)
+
 ## Core use cases
 
 ### 1) Local preflight
@@ -121,7 +130,7 @@ Generate publish-readiness signals and issue payloads for directory/registry wor
 ### Minimal PR gate
 
 ```yaml
-- uses: your-org/hol-codex-plugin-scanner-action@v1
+- uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
   with:
     plugin_dir: "."
     min_score: 70
@@ -130,7 +139,7 @@ Generate publish-readiness signals and issue payloads for directory/registry wor
 ### Markdown report for PR comments
 
 ```yaml
-- uses: your-org/hol-codex-plugin-scanner-action@v1
+- uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
   id: scan
   with:
     plugin_dir: "."
@@ -165,7 +174,7 @@ jobs:
 
       - name: Scan plugin and submit if eligible
         id: scan
-        uses: your-org/hol-codex-plugin-scanner-action@v1
+        uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
         with:
           plugin_dir: "."
           min_score: 80
@@ -183,11 +192,17 @@ Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-
 
 ## Release management
 
-- Publish immutable releases (for example `v1.2.0`).
+- Publish immutable releases (for example `v1.4.0`).
 - Move the floating major tag `v1` to the latest compatible release.
 - Keep this action in its own public repository for GitHub Marketplace publication.
 - Configure `ACTION_REPO_TOKEN` in the source repository so `publish-action-repo.yml` can sync this root-ready bundle automatically.
 - Optionally set `ACTION_REPOSITORY` in the source repository if the target repository should not be `hashgraph-online/hol-codex-plugin-scanner-action`.
+
+## Support files
+
+- [Contributing guide](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/CONTRIBUTING.md)
+- [Security policy](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/SECURITY.md)
+- [Source scanner repository](https://github.com/hashgraph-online/codex-plugin-scanner)
 
 ## Source of truth
 
