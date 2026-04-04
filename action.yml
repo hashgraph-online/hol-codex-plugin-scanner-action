@@ -1,10 +1,14 @@
 name: "HOL Codex Plugin Scanner"
-description: "Default CI gate for Codex plugins: lint/verify publish-readiness, enforce quality thresholds, and emit artifacts."
+description: "Scan a Codex plugin directory for security, publishability, and best practices. Scores from 0-100."
 author: "HOL"
 
 inputs:
+  mode:
+    description: "Execution mode: scan, lint, verify, or submit"
+    required: false
+    default: "scan"
   plugin_dir:
-    description: "Path to the plugin directory to validate (default: repository root)"
+    description: "Path to a single plugin directory or a repo marketplace root (default: repository root)"
     required: false
     default: "."
   format:
@@ -15,8 +19,40 @@ inputs:
     description: "Write report to this file path"
     required: false
     default: ""
+  profile:
+    description: "Policy profile to apply: default, public-marketplace, or strict-security"
+    required: false
+    default: "default"
+  config:
+    description: "Optional path to .codex-plugin-scanner.toml"
+    required: false
+    default: ""
+  baseline:
+    description: "Optional path to a baseline suppression file"
+    required: false
+    default: ""
+  online:
+    description: "Enable live network probing for verify mode"
+    required: false
+    default: "false"
+  upload_sarif:
+    description: "Upload the generated SARIF report to GitHub code scanning. Requires security-events: write in the calling workflow."
+    required: false
+    default: "false"
+  sarif_category:
+    description: "SARIF category used when upload_sarif is enabled"
+    required: false
+    default: "codex-plugin-scanner"
+  write_step_summary:
+    description: "Write a concise markdown summary to the GitHub Actions job summary"
+    required: false
+    default: "true"
+  registry_payload_output:
+    description: "Write a machine-readable Codex ecosystem payload JSON file for registry or awesome-list automation"
+    required: false
+    default: ""
   min_score:
-    description: "Fail CI if the plugin score is below this threshold (0-100)"
+    description: "Fail the job if the score is below this threshold (0-100)"
     required: false
     default: "0"
   fail_on_severity:
@@ -32,11 +68,11 @@ inputs:
     required: false
     default: "balanced"
   install_cisco:
-    description: "Install the Cisco skill-scanner dependency for live skill scanning"
+    description: "Install the published Cisco skill-scanner dependency used by this repo"
     required: false
     default: "false"
   submission_enabled:
-    description: "Open submission issues for awesome-list/registry automation when plugin passes the submission threshold"
+    description: "Open submission issues for awesome-list and registry automation when the plugin clears the submission threshold"
     required: false
     default: "false"
   submission_score_threshold:
@@ -79,16 +115,43 @@ inputs:
 outputs:
   score:
     description: "The numeric score (0-100)"
+    value: ${{ steps.scan.outputs.score }}
   grade:
     description: "The letter grade (A-F)"
+    value: ${{ steps.scan.outputs.grade }}
+  grade_label:
+    description: "The human-readable grade label"
+    value: ${{ steps.scan.outputs.grade_label }}
+  policy_pass:
+    description: "Whether the selected policy profile passed"
+    value: ${{ steps.scan.outputs.policy_pass }}
+  verify_pass:
+    description: "Whether runtime verification passed"
+    value: ${{ steps.scan.outputs.verify_pass }}
+  max_severity:
+    description: "The most severe finding in the scan result, or none"
+    value: ${{ steps.scan.outputs.max_severity }}
+  findings_total:
+    description: "The total number of findings across all severities"
+    value: ${{ steps.scan.outputs.findings_total }}
+  report_path:
+    description: "The path to the rendered report file, if output was requested"
+    value: ${{ steps.scan.outputs.report_path }}
+  registry_payload_path:
+    description: "The path to the machine-readable Codex ecosystem payload file, if requested"
+    value: ${{ steps.scan.outputs.registry_payload_path }}
   submission_eligible:
     description: "Whether the plugin met the submission threshold and passed the configured severity gate"
+    value: ${{ steps.scan.outputs.submission_eligible }}
   submission_performed:
     description: "Whether a submission issue was created or reused"
+    value: ${{ steps.scan.outputs.submission_performed }}
   submission_issue_urls:
     description: "Comma-separated URLs for submission issues created or reused"
+    value: ${{ steps.scan.outputs.submission_issue_urls }}
   submission_issue_numbers:
     description: "Comma-separated issue numbers for submission issues created or reused"
+    value: ${{ steps.scan.outputs.submission_issue_numbers }}
 
 branding:
   icon: "check-circle"
@@ -98,11 +161,11 @@ runs:
   using: "composite"
   steps:
     - name: Set up Python
-      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
       with:
         python-version: "3.12"
 
-    - name: Install codex-plugin-scanner
+    - name: Install scanner
       shell: bash
       run: |
         LOCAL_SOURCE=""
@@ -114,22 +177,34 @@ runs:
         done
 
         if [ -n "$LOCAL_SOURCE" ]; then
-          pip install "$LOCAL_SOURCE"
+          if [ "${{ inputs.install_cisco }}" = "true" ]; then
+            pip install "$LOCAL_SOURCE[cisco]"
+          else
+            pip install "$LOCAL_SOURCE"
+          fi
         else
-          pip install codex-plugin-scanner
+          if [ "${{ inputs.install_cisco }}" = "true" ]; then
+            pip install "codex-plugin-scanner[cisco]"
+          else
+            pip install codex-plugin-scanner
+          fi
         fi
 
-        if [ "${{ inputs.install_cisco }}" = "true" ]; then
-          pip install "cisco-ai-skill-scanner>=2.0.6,<3"
-        fi
-
-    - name: Run plugin quality gate
+    - name: Run scanner
       id: scan
       shell: bash
       env:
+        MODE: ${{ inputs.mode }}
         PLUGIN_DIR: ${{ inputs.plugin_dir }}
         FORMAT: ${{ inputs.format }}
         OUTPUT: ${{ inputs.output }}
+        PROFILE: ${{ inputs.profile }}
+        CONFIG: ${{ inputs.config }}
+        BASELINE: ${{ inputs.baseline }}
+        ONLINE: ${{ inputs.online }}
+        UPLOAD_SARIF: ${{ inputs.upload_sarif }}
+        WRITE_STEP_SUMMARY: ${{ inputs.write_step_summary }}
+        REGISTRY_PAYLOAD_OUTPUT: ${{ inputs.registry_payload_output }}
         MIN_SCORE: ${{ inputs.min_score }}
         FAIL_ON: ${{ inputs.fail_on_severity }}
         CISCO_SCAN: ${{ inputs.cisco_skill_scan }}
@@ -144,5 +219,12 @@ runs:
         SUBMISSION_PLUGIN_URL: ${{ inputs.submission_plugin_url }}
         SUBMISSION_PLUGIN_DESCRIPTION: ${{ inputs.submission_plugin_description }}
         SUBMISSION_AUTHOR: ${{ inputs.submission_author }}
-      run: |
-        python3 -m codex_plugin_scanner.action_runner
+        GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+      run: python3 -m codex_plugin_scanner.action_runner
+
+    - name: Upload SARIF
+      if: ${{ inputs.upload_sarif == 'true' && inputs.mode == 'scan' && steps.scan.outputs.report_path != '' }}
+      uses: github/codeql-action/upload-sarif@51f77329afa6477de8c49fc9c7046c15b9a4e79d
+      with:
+        sarif_file: ${{ steps.scan.outputs.report_path }}
+        category: ${{ inputs.sarif_category }}

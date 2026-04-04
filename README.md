@@ -1,98 +1,53 @@
 # HOL Codex Plugin Scanner GitHub Action
 
-[![GitHub Marketplace](https://img.shields.io/badge/GitHub_Marketplace-HOL_Codex_Plugin_Scanner-blue?logo=github)](https://github.com/marketplace/actions/hol-codex-plugin-scanner-action) [![GitHub Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag&logo=github)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/LICENSE) [![Scanner Source](https://img.shields.io/badge/source-codex--plugin--scanner-0A66C2?logo=github)](https://github.com/hashgraph-online/codex-plugin-scanner)
+Scan your [Codex plugin](https://developers.openai.com/codex/plugins) for security, publishability, and best practices. The action emits a `0-100` score, a grade, and the requested report format.
 
-| ![](https://raw.githubusercontent.com/hashgraph-online/standards-sdk-py/main/Hashgraph-Online.png) | **The default CI gate for Codex plugins — lint locally, verify in CI, and ship publish-ready bundles.** |
-| :---: | :--- |
+This README is intentionally root-ready for a dedicated GitHub Marketplace action repository. GitHub Marketplace requires that repository to contain a single root `action.yml` and no workflow files.
 
-Use this action after `$plugin-creator` and before publishing, review, or distribution. It catches packaging, security, and publish-readiness issues early, then emits machine-readable outputs you can use in PR gates, code scanning, and submission workflows.
-
-## Why this action exists
-
-OpenAI owns plugin creation with `$plugin-creator`. This action is the quality gate between creation and distribution:
-
-1. **Create** your plugin with `$plugin-creator`.
-2. **Validate locally** with `codex-plugin-scanner`.
-3. **Gate pull requests** with this GitHub Action.
-4. **Ship or submit** with confidence.
-
-> The score (`0-100`) is a useful trust signal, but it is evidence — not the headline.
-
-## 30-second setup
-
-### 1) Local preflight (recommended)
-
-```bash
-pipx run codex-plugin-scanner lint .
-pipx run codex-plugin-scanner verify .
-```
-
-### 2) Add the CI gate
+## Usage
 
 ```yaml
-name: Plugin quality gate
-
-on:
-  pull_request:
-  push:
-    branches: [main]
-
-jobs:
-  plugin-quality-gate:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate Codex plugin
-        uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
-        with:
-          plugin_dir: "."
-          min_score: 70
-          fail_on_severity: high
-          format: sarif
-          output: codex-plugin-scanner.sarif
-
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: codex-plugin-scanner.sarif
+- name: Scan Codex Plugin
+  uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
+  with:
+    plugin_dir: "./my-plugin"
+    min_score: 70
+    fail_on_severity: high
 ```
 
-## What this action does
-
-- Lints plugin structure and metadata hygiene.
-- Verifies install/runtime and publish-readiness surfaces.
-- Fails CI based on score and/or severity policy.
-- Emits report artifacts (`text`, `json`, `markdown`, `sarif`).
-- Uses the same scanner source of truth as the published `codex-plugin-scanner` package.
-- Optionally opens submission issues for awesome-list/registry workflows.
+If your repository exposes multiple plugins from `.agents/plugins/marketplace.json`, keep `plugin_dir: "."`. The action will discover local `./plugins/...` entries automatically, scan each local plugin, and skip remote marketplace entries.
 
 ## Inputs
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `plugin_dir` | Path to the plugin directory to validate | `.` |
+| `plugin_dir` | Path to a single plugin directory or a repo marketplace root | `.` |
+| `mode` | Execution mode: `scan`, `lint`, `verify`, or `submit` | `scan` |
 | `format` | Output format: `text`, `json`, `markdown`, `sarif` | `text` |
 | `output` | Write report to this file path | `""` |
+| `profile` | Policy profile: `default`, `public-marketplace`, or `strict-security` | `default` |
+| `config` | Optional path to `.codex-plugin-scanner.toml` | `""` |
+| `baseline` | Optional path to a baseline suppression file | `""` |
+| `online` | Enable live network probing for `verify` mode | `false` |
+| `upload_sarif` | Upload the generated SARIF report to GitHub code scanning when `mode: scan` | `false` |
+| `sarif_category` | SARIF category used during GitHub code scanning upload | `codex-plugin-scanner` |
+| `write_step_summary` | Write a concise markdown summary to the GitHub Actions job summary | `true` |
+| `registry_payload_output` | Write a machine-readable Codex ecosystem payload JSON file for registry or awesome-list automation | `""` |
 | `min_score` | Fail if score is below this threshold (0-100) | `0` |
 | `fail_on_severity` | Fail on findings at or above this severity: `none`, `critical`, `high`, `medium`, `low`, `info` | `none` |
 | `cisco_skill_scan` | Cisco skill-scanner mode: `auto`, `on`, `off` | `auto` |
 | `cisco_policy` | Cisco policy preset: `permissive`, `balanced`, `strict` | `balanced` |
-| `install_cisco` | Install Cisco skill-scanner dependency for live skill scanning | `false` |
+| `install_cisco` | Install the scanner with its `cisco` extra enabled | `false` |
 | `submission_enabled` | Open submission issues for awesome-list and registry automation when the plugin clears the submission threshold | `false` |
 | `submission_score_threshold` | Minimum score required before a submission issue is created | `80` |
 | `submission_repos` | Comma-separated GitHub repositories that should receive the submission issue | `hashgraph-online/awesome-codex-plugins` |
-| `submission_token` | Required when `submission_enabled` is `true`; use a token with `issues:write` access to submission repositories | `""` |
+| `submission_token` | Required when `submission_enabled` is `true`; use a token with `issues:write` access to the submission repositories | `""` |
 | `submission_labels` | Comma-separated labels to apply when creating submission issues | `plugin-submission` |
-| `submission_category` | Listing category included in submission issue body | `Community Plugins` |
-| `submission_plugin_name` | Override plugin name used in submission issue | `""` |
-| `submission_plugin_url` | Override plugin repository URL used in submission issue | `""` |
-| `submission_plugin_description` | Override plugin description used in submission issue | `""` |
-| `submission_author` | Override plugin author used in submission issue | `""` |
+| `submission_category` | Listing category included in the submission issue body | `Community Plugins` |
+| `submission_plugin_name` | Override the plugin name used in the submission issue | `""` |
+| `submission_plugin_url` | Override the plugin repository URL used in the submission issue | `""` |
+| `submission_plugin_description` | Override the plugin description used in the submission issue | `""` |
+| `submission_author` | Override the plugin author used in the submission issue | `""` |
 
 ## Outputs
 
@@ -100,34 +55,29 @@ jobs:
 |--------|-------------|
 | `score` | Numeric score (0-100) |
 | `grade` | Letter grade (A-F) |
-| `submission_eligible` | `true` when plugin met submission threshold and passed severity gate |
+| `grade_label` | Human-readable grade label |
+| `policy_pass` | `true` when the selected policy profile passed |
+| `verify_pass` | `true` when runtime verification passed |
+| `max_severity` | Highest finding severity, or `none` |
+| `findings_total` | Total number of findings across all severities |
+| `report_path` | Path to the rendered report file, if `output` was set |
+| `registry_payload_path` | Path to the machine-readable Codex ecosystem payload file, if requested |
+| `submission_eligible` | `true` when the plugin met the submission threshold and passed the configured severity gate |
 | `submission_performed` | `true` when a submission issue was created or an existing one was reused |
 | `submission_issue_urls` | Comma-separated submission issue URLs |
 | `submission_issue_numbers` | Comma-separated submission issue numbers |
 
-## Marketplace and release notes
+The action also writes a concise summary to `GITHUB_STEP_SUMMARY` by default. The full report is written to the job log for `text` output, or to the file you pass through `output` for `json`, `markdown`, or `sarif`.
 
-- Marketplace listing: [HOL Codex Plugin Scanner](https://github.com/marketplace/actions/hol-codex-plugin-scanner-action)
-- Release notes: [GitHub Releases](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases)
-- Source scanner changelog: [codex-plugin-scanner releases](https://github.com/hashgraph-online/codex-plugin-scanner/releases)
+Mode notes:
 
-## Core use cases
+- `scan` and `lint` respect `profile`, `config`, and `baseline`.
+- `verify` respects `online` and writes a human-readable report for `format: text`.
+- `submit` writes the plugin-quality artifact to `output` when provided, otherwise `plugin-quality.json`. `registry_payload_output` remains dedicated to the separate HOL registry payload.
 
-### 1) Local preflight
+## Examples
 
-Catch packaging, metadata, and security issues before you push.
-
-### 2) PR gate
-
-Block regressions in pull requests with score/severity thresholds.
-
-### 3) Submission preflight
-
-Generate publish-readiness signals and issue payloads for directory/registry workflows.
-
-## Additional examples
-
-### Minimal PR gate
+### Basic scan with minimum score gate
 
 ```yaml
 - uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
@@ -136,31 +86,64 @@ Generate publish-readiness signals and issue payloads for directory/registry wor
     min_score: 70
 ```
 
-### Markdown report for PR comments
+### SARIF output for GitHub Code Scanning
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
+        with:
+          plugin_dir: "."
+          mode: scan
+          format: sarif
+          fail_on_severity: high
+          upload_sarif: true
+```
+
+This `plugin_dir: "."` pattern is correct for both single-plugin repositories and multi-plugin marketplace repositories. When `.agents/plugins/marketplace.json` exists, the action switches into repository mode and scans each local plugin entry declared under `./plugins/...`.
+
+### With Cisco skill scanning
+
+```yaml
+- uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
+  with:
+    plugin_dir: "."
+    cisco_skill_scan: on
+    cisco_policy: strict
+    install_cisco: true
+```
+The action installs the scanner with its published `cisco` extra enabled, so the optional Cisco analysis path stays aligned with the dependency declared in `pyproject.toml`.
+
+### Export registry payload for Codex ecosystem automation
 
 ```yaml
 - uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
   id: scan
   with:
     plugin_dir: "."
-    format: markdown
-    output: scan-report.md
+    format: sarif
+    upload_sarif: true
+    registry_payload_output: codex-plugin-registry-payload.json
 
-- name: Comment PR
-  uses: actions/github-script@v7
-  with:
-    script: |
-      const fs = require('fs');
-      const report = fs.readFileSync('scan-report.md', 'utf8');
-      github.rest.issues.createComment({
-        issue_number: context.issue.number,
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        body: report
-      });
+- name: Show trust signals
+  run: |
+    echo "Score: ${{ steps.scan.outputs.score }}"
+    echo "Grade: ${{ steps.scan.outputs.grade_label }}"
+    echo "Max severity: ${{ steps.scan.outputs.max_severity }}"
 ```
 
-### Score 80+ and auto-file submission issue
+The registry payload mirrors the submission metadata used by HOL ecosystem automation, so the same scan can feed trust scoring, registry ingestion, badges, or awesome-list processing without reparsing the terminal output.
+
+### Score 80+ and auto-file an awesome-list submission issue
+
+When the scan reaches `80+` and does not trip the configured severity gate, the action opens or reuses a submission issue in `hashgraph-online/awesome-codex-plugins`. The issue body includes a machine-readable registry payload so downstream registry automation can ingest the same submission event.
 
 ```yaml
 permissions:
@@ -170,7 +153,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Scan plugin and submit if eligible
         id: scan
@@ -188,26 +171,59 @@ jobs:
         run: echo "${{ steps.scan.outputs.submission_issue_urls }}"
 ```
 
-Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-plugins`.
+Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-plugins`. `submission_token` is required when `submission_enabled: true`. The action deduplicates by an exact hidden plugin URL marker in the issue body, so repeated pushes reuse the open submission issue instead of opening duplicates.
 
-## Release management
+### Markdown report as PR comment
 
-- Publish immutable releases (for example `v1.4.0`).
+```yaml
+- uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
+  id: scan
+  with:
+    plugin_dir: "."
+    format: markdown
+    output: scan-report.md
+
+- name: Comment PR
+  uses: actions/github-script@v8
+  with:
+    script: |
+      const fs = require('fs');
+      const report = fs.readFileSync('scan-report.md', 'utf8');
+      github.rest.issues.createComment({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        body: report
+      });
+```
+
+## Release Management
+
+- Publish immutable releases such as `v1.4.0`.
 - Move the floating major tag `v1` to the latest compatible release.
 - Keep this action in its own public repository for GitHub Marketplace publication.
 - Configure `ACTION_REPO_TOKEN` in the source repository so `publish-action-repo.yml` can sync this root-ready bundle automatically.
 - Optionally set `ACTION_REPOSITORY` in the source repository if the target repository should not be `hashgraph-online/hol-codex-plugin-scanner-action`.
 
-## Support files
-
-- [Contributing guide](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/CONTRIBUTING.md)
-- [Security policy](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/SECURITY.md)
-- [Source scanner repository](https://github.com/hashgraph-online/codex-plugin-scanner)
-
-## Source of truth
+## Source Of Truth
 
 The source bundle for this action lives in the main scanner repository under `action/`. Release artifacts from that repository should export a root-ready action bundle for the dedicated Marketplace repository.
 
 ## License
 
 [Apache-2.0](https://github.com/hashgraph-online/codex-plugin-scanner/blob/main/LICENSE)
+
+## Mode-based workflow
+
+Set `mode` to one of `scan`, `lint`, `verify`, or `submit`.
+
+```yaml
+- uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
+  with:
+    mode: verify
+    plugin_dir: "."
+```
+
+For `submit` mode, point `plugin_dir` at one concrete plugin directory. Repository-mode discovery is supported for `scan`, `lint`, and `verify`, but `submit` intentionally remains single-plugin.
+
+For `scan` mode, set `upload_sarif: true` to emit and upload SARIF automatically instead of wiring a separate upload step by hand.
