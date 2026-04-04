@@ -1,6 +1,6 @@
 # HOL Codex Plugin Scanner GitHub Action
 
-[![GitHub Marketplace](https://img.shields.io/badge/GitHub_Marketplace-HOL_Codex_Plugin_Scanner-blue?logo=github)](https://github.com/marketplace/actions/hol-codex-plugin-scanner) [![GitHub Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag&logo=github)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE) [![Scanner Source](https://img.shields.io/badge/source-codex--plugin--scanner-0A66C2?logo=github)](https://github.com/hashgraph-online/codex-plugin-scanner)
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub_Marketplace-HOL_Codex_Plugin_Scanner-blue?logo=github)](https://github.com/marketplace/actions/hol-codex-plugin-scanner-action) [![GitHub Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag&logo=github)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/LICENSE) [![Scanner Source](https://img.shields.io/badge/source-codex--plugin--scanner-0A66C2?logo=github)](https://github.com/hashgraph-online/codex-plugin-scanner)
 
 | ![](https://raw.githubusercontent.com/hashgraph-online/standards-sdk-py/main/Hashgraph-Online.png) | **The default CI gate for Codex plugins — lint locally, verify in CI, and ship publish-ready bundles.** |
 | :---: | :--- |
@@ -107,7 +107,7 @@ jobs:
 
 ## Marketplace and release notes
 
-- Marketplace listing: [HOL Codex Plugin Scanner](https://github.com/marketplace/actions/hol-codex-plugin-scanner)
+- Marketplace listing: [HOL Codex Plugin Scanner](https://github.com/marketplace/actions/hol-codex-plugin-scanner-action)
 - Release notes: [GitHub Releases](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases)
 - Source scanner changelog: [codex-plugin-scanner releases](https://github.com/hashgraph-online/codex-plugin-scanner/releases)
 
@@ -200,8 +200,8 @@ Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-
 
 ## Support files
 
-- [Contributing guide](./CONTRIBUTING.md)
-- [Security policy](./SECURITY.md)
+- [Contributing guide](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/CONTRIBUTING.md)
+- [Security policy](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/blob/main/SECURITY.md)
 - [Source scanner repository](https://github.com/hashgraph-online/codex-plugin-scanner)
 
 ## Source of truth
