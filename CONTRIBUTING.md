@@ -1,46 +1,38 @@
-# Contributing
+# Contributing to Codex Plugin Scanner
 
-Thanks for helping maintain the Marketplace-facing bundle for `codex-plugin-scanner`.
+Thank you for your interest in contributing!
 
-## What lives here
+## Development Setup
 
-This repository is the dedicated GitHub Marketplace action wrapper for the scanner. The implementation source of truth lives in:
+```bash
+git clone https://github.com/hashgraph-online/codex-plugin-scanner.git
+cd codex-plugin-scanner
+pip install -e ".[dev]"
+pytest
+```
 
-- [`hashgraph-online/codex-plugin-scanner`](https://github.com/hashgraph-online/codex-plugin-scanner)
+## Adding New Checks
 
-Most functional changes should start in the source repository and then be published into this action repository through the release sync workflow.
+1. Create a new check function in the appropriate file under `src/codex_plugin_scanner/checks/`.
+2. Add it to the corresponding `run_*_checks()` function.
+3. Write tests in `tests/`.
+4. Update the README's checks table.
+5. Submit a PR.
 
-## What changes belong here
+## Code Style
 
-Changes that are appropriate in this repository:
+- Python 3.10+
+- Ruff for linting and formatting
+- All checks must return a `CheckResult` with accurate point values
 
-- README, Marketplace copy, and examples
-- action metadata in [`action.yml`](./action.yml)
-- release-only docs like this contributing guide
-- Marketplace-facing issue triage and support text
+## Pull Request Process
 
-Changes that should usually happen in the source repository first:
+1. Fork the repo
+2. Create a feature branch
+3. Write tests for new functionality
+4. Ensure `pytest` passes and `ruff check` is clean
+5. Submit PR against `main`
 
-- scanner behavior
-- CLI flags and output contracts
-- action runner logic
-- release automation that produces this bundle
+## License
 
-## Local review checklist
-
-Before opening a PR:
-
-1. Keep the diff focused on the action repository surface.
-2. Make sure README examples use the real slug: `hashgraph-online/hol-codex-plugin-scanner-action@v1`.
-3. If `action.yml` changes, confirm the inputs and outputs documented in [`README.md`](./README.md) still match.
-4. If release/version copy changes, keep it aligned with the latest published scanner release and Marketplace listing.
-
-## Pull requests
-
-- Use a focused title and description.
-- Include screenshots when the change is mainly Marketplace or README presentation.
-- Link the related source-repo PR when the update was generated from `codex-plugin-scanner`.
-
-## Security
-
-For vulnerability reports, follow [`SECURITY.md`](./SECURITY.md) and do not open public issues for undisclosed security bugs.
+By contributing, you agree that your contributions will be licensed under Apache-2.0.
