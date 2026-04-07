@@ -13,11 +13,29 @@ If you discover a security vulnerability in this project, please report it respo
 1. Do not open a public issue.
 2. Email us at security@hol.org with details.
 3. Include steps to reproduce, expected vs actual behavior, and potential impact.
-4. We will acknowledge within 48 hours and aim to resolve within 7 days.
+4. If the issue is in the source scanner, include the corresponding `plugin-scanner` version (or legacy alias `codex-plugin-scanner`) and commit when possible.
+5. We will acknowledge within 48 hours and aim to resolve within 7 days.
+
+## Scope
+
+This repository is the Marketplace-facing GitHub Action bundle. Some issues belong here, and some belong in the source repository:
+
+- Action-repository scope:
+  - incorrect `action.yml` metadata
+  - Marketplace-specific packaging mistakes
+  - broken README examples for the published action
+- Source-repository scope:
+  - scanner findings, scoring, verification, or submission logic
+  - CLI behavior
+  - release automation that generates this bundle
+
+Source repository:
+
+- [hashgraph-online/ai-plugin-scanner](https://github.com/hashgraph-online/ai-plugin-scanner)
 
 ## Security Best Practices
 
-This tool helps you follow security best practices for Codex plugins. For the latest guidance, see the [Codex Security documentation](https://developers.openai.com/codex/security).
+This tool helps you follow security best practices for AI plugin repositories. For Codex-specific guidance, see the [Codex Security documentation](https://developers.openai.com/codex/security).
 
 ### For Plugin Authors
 
