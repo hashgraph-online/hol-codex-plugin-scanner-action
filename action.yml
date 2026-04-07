@@ -445,8 +445,10 @@ runs:
             }
 
             let findings = [];
+            let hasStructuredFindings = false;
             if (Array.isArray(reportJson?.findings)) {
               findings = reportJson.findings;
+              hasStructuredFindings = true;
             } else if (Array.isArray(reportJson?.runs)) {
               findings = reportJson.runs
                 .flatMap((run) => (Array.isArray(run?.results) ? run.results : []))
@@ -458,6 +460,7 @@ runs:
                     title: message || ruleId,
                   };
                 });
+              hasStructuredFindings = true;
             }
             findings.sort((a, b) => {
               const aRank = severityRank[String(a?.severity || "none")] || 0;
@@ -507,6 +510,8 @@ runs:
             const scoreText = score ? `${score}/100` : "N/A";
             const gradeText = grade ? `${grade}${gradeLabel ? ` — ${gradeLabel}` : ""}` : "N/A";
             const findingCountText = findingsTotal || `${findings.length}`;
+            const findingCount = Number.parseInt(findingsTotal || "", 10);
+            const hasReportedFindings = Number.isFinite(findingCount) ? findingCount > 0 : findings.length > 0;
             const verdictEmoji = scannerPassed ? "✅" : "❌";
             const verdictText = scannerPassed ? "Scanner checks passed" : "Scanner checks failed";
             const targetText = `\`${escapeInlineMarkdown(scanPluginDir)}\``;
@@ -544,11 +549,24 @@ runs:
               gateChecklist(`Policy profile (${escapeInlineMarkdown(scanProfile)})`, policyPass),
               gateChecklist("Runtime verify", verifyPass),
               gateChecklist("Submission eligible", submissionEligible),
-              "",
-              "### Severity Mix",
-              "",
-              `🔴 \`critical ${severityCounts.critical}\` · 🟠 \`high ${severityCounts.high}\` · 🟡 \`medium ${severityCounts.medium}\` · 🔵 \`low ${severityCounts.low}\` · ⚪ \`info ${severityCounts.info}\``,
             ];
+
+            if (hasStructuredFindings) {
+              lines.push(
+                "",
+                "### Severity Mix",
+                "",
+                `🔴 \`critical ${severityCounts.critical}\` · 🟠 \`high ${severityCounts.high}\` · 🟡 \`medium ${severityCounts.medium}\` · 🔵 \`low ${severityCounts.low}\` · ⚪ \`info ${severityCounts.info}\``
+              );
+            } else {
+              lines.push(
+                "",
+                "### Severity Mix",
+                "",
+                `- Unavailable: report format \`${escapeInlineMarkdown(scanFormat)}\` is not machine-parseable for breakdowns in this step.`,
+                "- Use `format: json` or `format: sarif` to include severity distribution and detailed findings."
+              );
+            }
 
             if (submissionUrls.length > 0) {
               lines.push("", "Submission issues:");
@@ -612,7 +630,7 @@ runs:
               }
             }
 
-            if (topFindings.length > 0) {
+            if (hasStructuredFindings && topFindings.length > 0) {
               lines.push("", "### Top Findings", "");
               for (let i = 0; i < topFindings.length; i += 1) {
                 const finding = topFindings[i];
@@ -620,6 +638,16 @@ runs:
                 const title = escapeInlineMarkdown(truncateText(String(finding?.title || "Untitled finding"), 220));
                 lines.push(`${i + 1}. ${severityIcon(severity)} \`${escapeInlineMarkdown(severity)}\` ${title}`);
               }
+            } else if (hasStructuredFindings) {
+              lines.push("", "### Top Findings", "", "- No findings to highlight.");
+            } else if (hasReportedFindings) {
+              lines.push(
+                "",
+                "### Top Findings",
+                "",
+                `- Scanner reported \`${escapeInlineMarkdown(findingCountText)}\` findings, but detailed entries are unavailable for \`${escapeInlineMarkdown(scanFormat)}\` output.`,
+                "- Set `format: json` or `format: sarif` to include top findings in PR comments."
+              );
             } else {
               lines.push("", "### Top Findings", "", "- No findings to highlight.");
             }
