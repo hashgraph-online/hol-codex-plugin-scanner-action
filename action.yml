@@ -453,6 +453,28 @@ runs:
               return String(a?.title || "").localeCompare(String(b?.title || ""));
             });
             const topFindings = findings.slice(0, maxFindings);
+            const truncateText = (value, maxLength = 200) => {
+              if (typeof value !== "string") return "";
+              const normalized = value.replace(/\s+/g, " ").trim();
+              if (normalized.length <= maxLength) return normalized;
+              return `${normalized.slice(0, Math.max(0, maxLength - 1))}…`;
+            };
+            const escapeInlineMarkdown = (value) =>
+              String(value || "")
+                .replace(/\\/g, "\\\\")
+                .replace(/`/g, "\\`")
+                .replace(/\|/g, "\\|")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+            const severityIcon = (severity) => {
+              const key = String(severity || "").toLowerCase();
+              if (key === "critical") return "🔴";
+              if (key === "high") return "🟠";
+              if (key === "medium") return "🟡";
+              if (key === "low") return "🔵";
+              if (key === "info") return "⚪";
+              return "⚫";
+            };
 
             const statusBadge = (value, unknownLabel = "N/A") => {
               if (value === "true") return "✅ Pass";
@@ -474,33 +496,38 @@ runs:
             const findingCountText = findingsTotal || `${findings.length}`;
             const verdictEmoji = scannerPassed ? "✅" : "❌";
             const verdictText = scannerPassed ? "Scanner checks passed" : "Scanner checks failed";
+            const targetText = `\`${escapeInlineMarkdown(scanPluginDir)}\``;
 
             const lines = [
               `## ${verdictEmoji} HOL Codex Plugin Scanner`,
               "",
-              `${verdictText} for \`${scanPluginDir}\``,
+              `${verdictText} for ${targetText}`,
               "",
-              "| Check | Result |",
-              "| --- | --- |",
-              `| Scanner run | ${statusBadge(scannerPassed ? "true" : "false")} |`,
-              `| Policy profile (\`${scanProfile}\`) | ${statusBadge(policyPass)} |`,
-              `| Runtime verify | ${statusBadge(verifyPass)} |`,
-              `| Submission eligible | ${statusBadge(submissionEligible)} |`,
+              `**Mode:** \`${escapeInlineMarkdown(scanMode)}\` · **Profile:** \`${escapeInlineMarkdown(scanProfile)}\` · **Target:** ${targetText}`,
               "",
-              "| Metric | Value |",
-              "| --- | --- |",
-              `| Mode | \`${scanMode}\` |`,
-              `| Score | \`${scoreText}\` |`,
-              `| Grade | \`${gradeText}\` |`,
-              `| Max severity | \`${maxSeverity || "none"}\` |`,
-              `| Findings | \`${findingCountText}\` |`,
-              `| PR checks | [view checks](${checksUrl}) |`,
+              "| Score | Grade | Findings | Max Severity |",
+              "| ---: | ---: | ---: | ---: |",
+              `| \`${escapeInlineMarkdown(scoreText)}\` | \`${escapeInlineMarkdown(gradeText)}\` | \`${escapeInlineMarkdown(findingCountText)}\` | \`${escapeInlineMarkdown(maxSeverity || "none")}\` |`,
               "",
-              `Severity breakdown: \`critical ${severityCounts.critical} | high ${severityCounts.high} | medium ${severityCounts.medium} | low ${severityCounts.low} | info ${severityCounts.info}\``,
+              "### Quality Gates",
+              "",
+              `- Scanner run: ${statusBadge(scannerPassed ? "true" : "false")}`,
+              `- Policy profile (\`${escapeInlineMarkdown(scanProfile)}\`): ${statusBadge(policyPass)}`,
+              `- Runtime verify: ${statusBadge(verifyPass)}`,
+              `- Submission eligible: ${statusBadge(submissionEligible)}`,
+              "",
+              "### Severity Mix",
+              "",
+              `\`critical ${severityCounts.critical}\` · \`high ${severityCounts.high}\` · \`medium ${severityCounts.medium}\` · \`low ${severityCounts.low}\` · \`info ${severityCounts.info}\``,
+              "",
+              `[View workflow checks](${checksUrl})`,
             ];
 
             if (submissionUrls.length > 0) {
-              lines.push("", `Submission issues: ${submissionUrls.map((url) => `[link](${url})`).join(", ")}`);
+              lines.push("", "Submission issues:");
+              for (const url of submissionUrls) {
+                lines.push(`- [Open issue](${url})`);
+              }
             }
 
             const snapshot = {
@@ -549,7 +576,7 @@ runs:
                       }
                     }
                     if (deltas.length > 0) {
-                      lines.push("", `Delta vs previous scanner run in this PR: \`${deltas.join(" | ")}\``);
+                      lines.push("", `### Delta vs Previous Run`, "", `\`${escapeInlineMarkdown(deltas.join(" | "))}\``);
                     }
                   } catch {
                     // Ignore malformed historical payloads
@@ -559,11 +586,12 @@ runs:
             }
 
             if (topFindings.length > 0) {
-              lines.push("", "### Top Findings", "", "| Severity | Finding |", "| --- | --- |");
-              for (const finding of topFindings) {
-                const severity = String(finding?.severity || "unknown");
-                const title = String(finding?.title || "Untitled finding");
-                lines.push(`| \`${severity}\` | ${title} |`);
+              lines.push("", "### Top Findings", "");
+              for (let i = 0; i < topFindings.length; i += 1) {
+                const finding = topFindings[i];
+                const severity = String(finding?.severity || "unknown").toLowerCase();
+                const title = escapeInlineMarkdown(truncateText(String(finding?.title || "Untitled finding"), 220));
+                lines.push(`${i + 1}. ${severityIcon(severity)} \`${escapeInlineMarkdown(severity)}\` ${title}`);
               }
             }
 
