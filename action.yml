@@ -399,7 +399,8 @@ runs:
             const verifyPass = process.env.SCAN_VERIFY_PASS || "";
             const submissionEligible = process.env.SCAN_SUBMISSION_ELIGIBLE || "";
             const submissionUrls = (process.env.SCAN_SUBMISSION_URLS || "").split(",").filter(Boolean);
-            const workflowUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const pullRequestUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/pull/${issueNumber}`;
+            const checksUrl = `${pullRequestUrl}/checks`;
             const scanFormat = process.env.SCAN_FORMAT || "text";
             const scanOutputPath = process.env.SCAN_OUTPUT_PATH || "";
 
@@ -493,7 +494,7 @@ runs:
               `| Grade | \`${gradeText}\` |`,
               `| Max severity | \`${maxSeverity || "none"}\` |`,
               `| Findings | \`${findingCountText}\` |`,
-              `| Workflow run | [view run](${workflowUrl}) |`,
+              `| PR checks | [view checks](${checksUrl}) |`,
               "",
               `Severity breakdown: \`critical ${severityCounts.critical} | high ${severityCounts.high} | medium ${severityCounts.medium} | low ${severityCounts.low} | info ${severityCounts.info}\``,
             ];
