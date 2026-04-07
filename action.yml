@@ -339,6 +339,7 @@ runs:
         SCAN_PLUGIN_DIR: ${{ inputs.plugin_dir }}
         SCAN_FORMAT: ${{ inputs.format }}
         SCAN_OUTPUT_PATH: ${{ inputs.output }}
+        SCAN_REPORT_PATH: ${{ steps.scan.outputs.report_path }}
         SCAN_SCORE: ${{ steps.scan.outputs.score }}
         SCAN_GRADE: ${{ steps.scan.outputs.grade }}
         SCAN_GRADE_LABEL: ${{ steps.scan.outputs.grade_label }}
@@ -370,6 +371,15 @@ runs:
             core.setOutput("pr_comment_url", url);
             core.setOutput("pr_comment_id", id);
           };
+          const failOrSkip = (reason) => {
+            if (mode === "always") {
+              setOutcome("failed", reason);
+              core.setFailed(`pull request comment failed: ${reason}`);
+              return true;
+            }
+            setOutcome("skipped", reason);
+            return true;
+          };
 
           if (mode === "off") {
             setOutcome("disabled");
@@ -378,11 +388,11 @@ runs:
 
           try {
             if (!["pull_request", "pull_request_target"].includes(eventName)) {
-              setOutcome("skipped", "not a pull request event");
+              failOrSkip("not a pull request event");
               return;
             }
             if (!issueNumber) {
-              setOutcome("skipped", "no pull request number in event payload");
+              failOrSkip("no pull request number in event payload");
               return;
             }
 
@@ -402,7 +412,7 @@ runs:
             const pullRequestUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/pull/${issueNumber}`;
             const checksUrl = `${pullRequestUrl}/checks`;
             const scanFormat = process.env.SCAN_FORMAT || "text";
-            const scanOutputPath = process.env.SCAN_OUTPUT_PATH || "";
+            const scanOutputPath = process.env.SCAN_OUTPUT_PATH || process.env.SCAN_REPORT_PATH || "";
 
             const computedHeader = explicitHeader || `mode=${scanMode};profile=${scanProfile};target=${scanPluginDir}`;
             const marker = `<!-- hol-codex-plugin-scanner:${computedHeader} -->`;
@@ -422,7 +432,7 @@ runs:
             let reportText = "";
             if (scanOutputPath && fs.existsSync(scanOutputPath)) {
               reportText = fs.readFileSync(scanOutputPath, "utf8");
-              if (scanFormat === "json") {
+              if (scanFormat === "json" || scanFormat === "sarif") {
                 try {
                   reportJson = JSON.parse(reportText);
                 } catch {
@@ -497,28 +507,35 @@ runs:
             const verdictEmoji = scannerPassed ? "✅" : "❌";
             const verdictText = scannerPassed ? "Scanner checks passed" : "Scanner checks failed";
             const targetText = `\`${escapeInlineMarkdown(scanPluginDir)}\``;
+            const overallGatePass = scannerPassed && policyPass !== "false" && verifyPass !== "false";
+            const overallLabel = overallGatePass ? "Ready" : "Needs Attention";
+            const overallSummary = overallGatePass
+              ? "Quality gates passed for this run."
+              : "One or more quality gates failed in this run.";
+            const gateStatus = (name, value, unknownLabel = "N/A") => `- ${name}: ${statusBadge(value, unknownLabel)}`;
 
             const lines = [
-              `## ${verdictEmoji} HOL Codex Plugin Scanner`,
+              `## ${verdictEmoji} HOL Codex Plugin Scanner · ${overallLabel}`,
               "",
               `${verdictText} for ${targetText}`,
               "",
               `**Mode:** \`${escapeInlineMarkdown(scanMode)}\` · **Profile:** \`${escapeInlineMarkdown(scanProfile)}\` · **Target:** ${targetText}`,
               "",
+              `> ${overallSummary}`,
+              "",
               "| Score | Grade | Findings | Max Severity |",
               "| ---: | ---: | ---: | ---: |",
               `| \`${escapeInlineMarkdown(scoreText)}\` | \`${escapeInlineMarkdown(gradeText)}\` | \`${escapeInlineMarkdown(findingCountText)}\` | \`${escapeInlineMarkdown(maxSeverity || "none")}\` |`,
               "",
-              "### Quality Gates",
-              "",
-              `- Scanner run: ${statusBadge(scannerPassed ? "true" : "false")}`,
-              `- Policy profile (\`${escapeInlineMarkdown(scanProfile)}\`): ${statusBadge(policyPass)}`,
-              `- Runtime verify: ${statusBadge(verifyPass)}`,
-              `- Submission eligible: ${statusBadge(submissionEligible)}`,
+              "### Gate Status",
+              gateStatus("Scanner run", scannerPassed ? "true" : "false"),
+              gateStatus(`Policy profile (\`${escapeInlineMarkdown(scanProfile)}\`)`, policyPass),
+              gateStatus("Runtime verify", verifyPass),
+              gateStatus("Submission eligible", submissionEligible),
               "",
               "### Severity Mix",
               "",
-              `\`critical ${severityCounts.critical}\` · \`high ${severityCounts.high}\` · \`medium ${severityCounts.medium}\` · \`low ${severityCounts.low}\` · \`info ${severityCounts.info}\``,
+              `🔴 \`critical ${severityCounts.critical}\` · 🟠 \`high ${severityCounts.high}\` · 🟡 \`medium ${severityCounts.medium}\` · 🔵 \`low ${severityCounts.low}\` · ⚪ \`info ${severityCounts.info}\``,
               "",
               `[View workflow checks](${checksUrl})`,
             ];
@@ -593,6 +610,8 @@ runs:
                 const title = escapeInlineMarkdown(truncateText(String(finding?.title || "Untitled finding"), 220));
                 lines.push(`${i + 1}. ${severityIcon(severity)} \`${escapeInlineMarkdown(severity)}\` ${title}`);
               }
+            } else {
+              lines.push("", "### Top Findings", "", "- No findings to highlight.");
             }
 
             if (style === "full" && reportText.trim().length > 0) {
