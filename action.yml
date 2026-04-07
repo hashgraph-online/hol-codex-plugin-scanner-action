@@ -351,7 +351,6 @@ runs:
       with:
         github-token: ${{ inputs.pr_comment_token != '' && inputs.pr_comment_token || github.token }}
         script: |
-          const core = require("@actions/core");
           const fs = require("node:fs");
 
           const mode = (process.env.PR_COMMENT_MODE || "off").toLowerCase().trim();
@@ -478,14 +477,15 @@ runs:
               .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
             const current = matching[0] ?? null;
             const previous = matching[1] ?? null;
+            const baselineComment = previous ?? current;
 
-            if (compareToPrevious && previous && typeof previous.body === "string") {
-              const start = previous.body.indexOf(dataPrefix);
+            if (compareToPrevious && baselineComment && typeof baselineComment.body === "string") {
+              const start = baselineComment.body.indexOf(dataPrefix);
               if (start >= 0) {
-                const end = previous.body.indexOf(dataSuffix, start);
+                const end = baselineComment.body.indexOf(dataSuffix, start);
                 if (end > start) {
                   try {
-                    const encoded = previous.body.slice(start + dataPrefix.length, end).trim();
+                    const encoded = baselineComment.body.slice(start + dataPrefix.length, end).trim();
                     const prior = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
                     const deltas = [];
                     if (typeof snapshot.score === "number" && typeof prior.score === "number") {
