@@ -1,12 +1,12 @@
 # Contributing
 
-Thanks for helping maintain the Marketplace-facing bundle for `codex-plugin-scanner`.
+Thanks for helping maintain the Marketplace-facing bundle for `plugin-scanner` (legacy package alias: `codex-plugin-scanner`).
 
 ## What lives here
 
 This repository is the dedicated GitHub Marketplace action wrapper for the scanner. The implementation source of truth lives in:
 
-- [`hashgraph-online/codex-plugin-scanner`](https://github.com/hashgraph-online/codex-plugin-scanner)
+- [`hashgraph-online/ai-plugin-scanner`](https://github.com/hashgraph-online/ai-plugin-scanner)
 
 Most functional changes should start in the source repository and then be published into this action repository through the release sync workflow.
 
@@ -39,7 +39,7 @@ Before opening a PR:
 
 - Use a focused title and description.
 - Include screenshots when the change is mainly Marketplace or README presentation.
-- Link the related source-repo PR when the update was generated from `codex-plugin-scanner`.
+- Link the related source-repo PR when the update was generated from `ai-plugin-scanner`.
 
 ## Security
 

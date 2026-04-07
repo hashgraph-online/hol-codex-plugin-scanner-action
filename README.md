@@ -1,11 +1,11 @@
-# HOL Codex Plugin Scanner GitHub Action
+# HOL AI Plugin Scanner GitHub Action
 
 [![Latest Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)
 [![Marketplace Repository](https://img.shields.io/badge/github-marketplace_repo-0A84FF)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)
-[![Source of Truth](https://img.shields.io/badge/source-codex--plugin--scanner-111827)](https://github.com/hashgraph-online/codex-plugin-scanner/tree/main/action)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/codex-plugin-scanner/blob/main/LICENSE)
+[![Source of Truth](https://img.shields.io/badge/source-ai--plugin--scanner-111827)](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
 
-| ![Hashgraph Online Logo](https://raw.githubusercontent.com/hashgraph-online/standards-sdk-py/main/Hashgraph-Online.png) | Marketplace-ready GitHub Action for scanning [Codex plugins](https://developers.openai.com/codex/plugins) for security, publishability, runtime readiness, and registry trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)<br>[Marketplace Repository](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/codex-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/codex-plugin-scanner/issues) |
+| ![Hashgraph Online Logo](https://raw.githubusercontent.com/hashgraph-online/standards-sdk-py/main/Hashgraph-Online.png) | Marketplace-ready GitHub Action for scanning AI plugin repositories (including Codex, Claude, Gemini, and OpenCode ecosystems) for security, publishability, runtime readiness, and trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)<br>[Marketplace Repository](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/ai-plugin-scanner/issues) |
 | :--- | :--- |
 
 This repository is the Marketplace-facing wrapper for the scanner action. The main scanner repo remains the source of truth, while this published action bundle keeps the required root `action.yml` layout for GitHub Marketplace.
@@ -13,7 +13,7 @@ This repository is the Marketplace-facing wrapper for the scanner action. The ma
 ## Usage
 
 ```yaml
-- name: Scan Codex Plugin
+- name: Scan AI Plugin Repository
   uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
   with:
     plugin_dir: "./my-plugin"
@@ -36,9 +36,9 @@ If your repository exposes multiple plugins from `.agents/plugins/marketplace.js
 | `baseline` | Optional path to a baseline suppression file | `""` |
 | `online` | Enable live network probing for `verify` mode | `false` |
 | `upload_sarif` | Upload the generated SARIF report to GitHub code scanning when `mode: scan` | `false` |
-| `sarif_category` | SARIF category used during GitHub code scanning upload | `codex-plugin-scanner` |
+| `sarif_category` | SARIF category used during GitHub code scanning upload | `ai-plugin-scanner` |
 | `write_step_summary` | Write a concise markdown summary to the GitHub Actions job summary | `true` |
-| `registry_payload_output` | Write a machine-readable Codex ecosystem payload JSON file for registry or awesome-list automation | `""` |
+| `registry_payload_output` | Write a machine-readable plugin ecosystem payload JSON file for registry or awesome-list automation | `""` |
 | `min_score` | Fail if score is below this threshold (0-100) | `0` |
 | `fail_on_severity` | Fail on findings at or above this severity: `none`, `critical`, `high`, `medium`, `low`, `info` | `none` |
 | `cisco_skill_scan` | Cisco skill-scanner mode: `auto`, `on`, `off` | `auto` |
@@ -67,7 +67,7 @@ If your repository exposes multiple plugins from `.agents/plugins/marketplace.js
 | `max_severity` | Highest finding severity, or `none` |
 | `findings_total` | Total number of findings across all severities |
 | `report_path` | Path to the rendered report file, if `output` was set |
-| `registry_payload_path` | Path to the machine-readable Codex ecosystem payload file, if requested |
+| `registry_payload_path` | Path to the machine-readable plugin ecosystem payload file, if requested |
 | `submission_eligible` | `true` when the plugin met the submission threshold and passed the configured severity gate |
 | `submission_performed` | `true` when a submission issue was created or an existing one was reused |
 | `submission_issue_urls` | Comma-separated submission issue URLs |
@@ -127,7 +127,7 @@ This `plugin_dir: "."` pattern is correct for both single-plugin repositories an
 ```
 The action installs the scanner with its published `cisco` extra enabled, so the optional Cisco analysis path stays aligned with the dependency declared in `pyproject.toml`.
 
-### Export registry payload for Codex ecosystem automation
+### Export registry payload for ecosystem automation
 
 ```yaml
 - uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
@@ -136,7 +136,7 @@ The action installs the scanner with its published `cisco` extra enabled, so the
     plugin_dir: "."
     format: sarif
     upload_sarif: true
-    registry_payload_output: codex-plugin-registry-payload.json
+    registry_payload_output: ai-plugin-registry-payload.json
 
 - name: Show trust signals
   run: |
@@ -215,11 +215,11 @@ Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-
 
 The source bundle for this action lives in the main scanner repository under `action/`. Release artifacts from that repository should export a root-ready action bundle for the dedicated Marketplace repository.
 
-Direct edits in this Marketplace repository should stay limited to Marketplace-specific copy or metadata. Functional changes and release publication logic belong in `hashgraph-online/codex-plugin-scanner` so merges there can publish a matching action release automatically.
+Direct edits in this Marketplace repository should stay limited to Marketplace-specific copy or metadata. Functional changes and release publication logic belong in `hashgraph-online/ai-plugin-scanner` so merges there can publish a matching action release automatically.
 
 ## License
 
-[Apache-2.0](https://github.com/hashgraph-online/codex-plugin-scanner/blob/main/LICENSE)
+[Apache-2.0](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
 
 ## Mode-based workflow
 
