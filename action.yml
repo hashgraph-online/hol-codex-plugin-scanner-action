@@ -412,7 +412,10 @@ runs:
             const pullRequestUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/pull/${issueNumber}`;
             const checksUrl = `${pullRequestUrl}/checks`;
             const scanFormat = process.env.SCAN_FORMAT || "text";
-            const scanOutputPath = process.env.SCAN_OUTPUT_PATH || process.env.SCAN_REPORT_PATH || "";
+            const configuredOutputPath = process.env.SCAN_OUTPUT_PATH || "";
+            const emittedReportPath = process.env.SCAN_REPORT_PATH || "";
+            const scanOutputPathCandidates = [configuredOutputPath, emittedReportPath].filter(Boolean);
+            const scanOutputPath = scanOutputPathCandidates.find((candidate) => fs.existsSync(candidate)) || scanOutputPathCandidates[0] || "";
 
             const computedHeader = explicitHeader || `mode=${scanMode};profile=${scanProfile};target=${scanPluginDir}`;
             const marker = `<!-- hol-codex-plugin-scanner:${computedHeader} -->`;
@@ -444,7 +447,7 @@ runs:
             let findings = [];
             if (Array.isArray(reportJson?.findings)) {
               findings = reportJson.findings;
-            } else if (scanFormat === "sarif" && Array.isArray(reportJson?.runs)) {
+            } else if (Array.isArray(reportJson?.runs)) {
               findings = reportJson.runs
                 .flatMap((run) => (Array.isArray(run?.results) ? run.results : []))
                 .map((result) => {
@@ -512,32 +515,39 @@ runs:
             const overallSummary = overallGatePass
               ? "Quality gates passed for this run."
               : "One or more quality gates failed in this run.";
-            const gateStatus = (name, value, unknownLabel = "N/A") => `- ${name}: ${statusBadge(value, unknownLabel)}`;
+            const gateChecklist = (name, value) => {
+              if (value === "true") return `- [x] ${name}`;
+              if (value === "false") return `- [ ] ${name}`;
+              return `- [-] ${name}`;
+            };
 
             const lines = [
               `## ${verdictEmoji} HOL Codex Plugin Scanner · ${overallLabel}`,
               "",
               `${verdictText} for ${targetText}`,
               "",
-              `**Mode:** \`${escapeInlineMarkdown(scanMode)}\` · **Profile:** \`${escapeInlineMarkdown(scanProfile)}\` · **Target:** ${targetText}`,
+              `> \`${escapeInlineMarkdown(scanMode)}\` · profile \`${escapeInlineMarkdown(scanProfile)}\` · target ${targetText}`,
               "",
               `> ${overallSummary}`,
               "",
-              "| Score | Grade | Findings | Max Severity |",
-              "| ---: | ---: | ---: | ---: |",
-              `| \`${escapeInlineMarkdown(scoreText)}\` | \`${escapeInlineMarkdown(gradeText)}\` | \`${escapeInlineMarkdown(findingCountText)}\` | \`${escapeInlineMarkdown(maxSeverity || "none")}\` |`,
+              "### Snapshot",
+              "",
+              `- **Score:** \`${escapeInlineMarkdown(scoreText)}\``,
+              `- **Grade:** \`${escapeInlineMarkdown(gradeText)}\``,
+              `- **Findings:** \`${escapeInlineMarkdown(findingCountText)}\``,
+              `- **Max severity:** \`${escapeInlineMarkdown(maxSeverity || "none")}\``,
+              `- **Checks:** [View workflow checks](${checksUrl})`,
               "",
               "### Gate Status",
-              gateStatus("Scanner run", scannerPassed ? "true" : "false"),
-              gateStatus(`Policy profile (\`${escapeInlineMarkdown(scanProfile)}\`)`, policyPass),
-              gateStatus("Runtime verify", verifyPass),
-              gateStatus("Submission eligible", submissionEligible),
+              "",
+              gateChecklist("Scanner run", scannerPassed ? "true" : "false"),
+              gateChecklist(`Policy profile (${escapeInlineMarkdown(scanProfile)})`, policyPass),
+              gateChecklist("Runtime verify", verifyPass),
+              gateChecklist("Submission eligible", submissionEligible),
               "",
               "### Severity Mix",
               "",
               `🔴 \`critical ${severityCounts.critical}\` · 🟠 \`high ${severityCounts.high}\` · 🟡 \`medium ${severityCounts.medium}\` · 🔵 \`low ${severityCounts.low}\` · ⚪ \`info ${severityCounts.info}\``,
-              "",
-              `[View workflow checks](${checksUrl})`,
             ];
 
             if (submissionUrls.length > 0) {
@@ -593,7 +603,7 @@ runs:
                       }
                     }
                     if (deltas.length > 0) {
-                      lines.push("", `### Delta vs Previous Run`, "", `\`${escapeInlineMarkdown(deltas.join(" | "))}\``);
+                      lines.push("", "### Delta vs Previous Run", "", `\`${escapeInlineMarkdown(deltas.join(" | "))}\``);
                     }
                   } catch {
                     // Ignore malformed historical payloads
