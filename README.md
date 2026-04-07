@@ -2,20 +2,20 @@
 
 [![Latest Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)
 [![Marketplace Repository](https://img.shields.io/badge/github-marketplace_repo-0A84FF)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)
-[![Source of Truth](https://img.shields.io/badge/source-codex--plugin--scanner-111827)](https://github.com/hashgraph-online/codex-plugin-scanner/tree/main/action)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/codex-plugin-scanner/blob/main/LICENSE)
+[![Source of Truth](https://img.shields.io/badge/source-ai--plugin--scanner-111827)](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
 
-| ![Hashgraph Online Logo](https://hol.org/brand/Logo_Whole_Dark.png) | Marketplace-ready GitHub Action for scanning [Codex plugins](https://developers.openai.com/codex/plugins) for security, publishability, runtime readiness, and registry trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)<br>[Marketplace Repository](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/codex-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/codex-plugin-scanner/issues) |
+| ![Hashgraph Online Logo](https://hol.org/brand/Logo_Whole_Dark.png) | Marketplace-ready GitHub Action for scanning [Codex plugins](https://developers.openai.com/codex/plugins) for security, publishability, runtime readiness, and registry trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)<br>[Marketplace Repository](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/ai-plugin-scanner/issues) |
 | :--- | :--- |
 
 This repository is the Marketplace-facing wrapper for the scanner action. The main scanner repo remains the source of truth, while this published action bundle keeps the required root `action.yml` layout for GitHub Marketplace.
 
-The default Marketplace install path uses an exact `codex-plugin-scanner` PyPI release, verifies its PyPI provenance against `hashgraph-online/codex-plugin-scanner`, and only then installs it. After installation, the default `scan`, `lint`, and offline `verify` paths operate on local repository content only. Live network probing and submission automation remain explicit opt-in features.
+The default Marketplace install path uses an exact `codex-plugin-scanner` PyPI release, verifies its PyPI provenance against `hashgraph-online/ai-plugin-scanner`, and only then installs it. After installation, the default `scan`, `lint`, and offline `verify` paths operate on local repository content only. Live network probing and submission automation remain explicit opt-in features.
 
 Advanced distribution paths are available when you need them:
 
 - `install_source: local` is the explicit dogfood path for `uses: ./action` inside the source repo.
-- `ghcr.io/hashgraph-online/codex-plugin-scanner` is the container distribution for enterprise runners that prefer a reviewed OCI image over runtime package installation.
+- `ghcr.io/hashgraph-online/ai-plugin-scanner` is the container distribution for enterprise runners that prefer a reviewed OCI image over runtime package installation.
 
 ## Usage
 
@@ -60,13 +60,6 @@ Advanced distribution paths are available when you need them:
 | `submission_plugin_url` | Override the plugin repository URL used in the submission issue | `""` |
 | `submission_plugin_description` | Override the plugin description used in the submission issue | `""` |
 | `submission_author` | Override the plugin author used in the submission issue | `""` |
-| `pr_comment` | Sticky PR summary comment mode: `off`, `auto`, `always` | `off` |
-| `pr_comment_style` | PR comment detail level: `concise` or `full` | `concise` |
-| `pr_comment_header` | Optional sticky comment header override | `""` |
-| `pr_comment_max_findings` | Maximum top findings listed in the comment | `3` |
-| `pr_comment_token` | Optional token for comments; defaults to `github.token` | `""` |
-| `pr_comment_skip_if_unchanged` | Skip updates when rendered comment body did not change | `true` |
-| `pr_comment_compare_to_previous` | Include metric deltas vs previous scanner comment on the same PR | `true` |
 
 ## Outputs
 
@@ -85,12 +78,6 @@ Advanced distribution paths are available when you need them:
 | `submission_performed` | `true` when a submission issue was created or an existing one was reused |
 | `submission_issue_urls` | Comma-separated submission issue URLs |
 | `submission_issue_numbers` | Comma-separated submission issue numbers |
-| `pr_comment_status` | PR comment status: `disabled`, `skipped`, `created`, `updated`, `unchanged`, or `failed` |
-| `pr_comment_url` | URL of the sticky PR comment when available |
-| `pr_comment_id` | Numeric GitHub issue-comment ID when available |
-| `pr_comment_reason` | Reason for skipped/failed comment operations |
-| `action_exit_code` | Final scanner execution code after orchestration |
-| `action_exit_reason` | Human-readable reason for non-zero exit |
 
 The action also writes a concise summary to `GITHUB_STEP_SUMMARY` by default. The full report is written to the job log for `text` output, or to the file you pass through `output` for `json`, `markdown`, or `sarif`.
 
@@ -99,7 +86,7 @@ Mode notes:
 - `scan` and `lint` respect `profile`, `config`, and `baseline`.
 - `verify` respects `online` and writes a human-readable report for `format: text`.
 - `submit` writes the plugin-quality artifact to `output` when provided, otherwise `plugin-quality.json`. `registry_payload_output` remains dedicated to the separate HOL registry payload.
-- `online`, `submission_enabled`, `upload_sarif`, and `pr_comment` are the common paths that intentionally reach beyond the runner after the scanner package itself has been installed.
+- `online`, `submission_enabled`, and `upload_sarif` are the only common paths that intentionally reach beyond the runner after the scanner package itself has been installed.
 
 ## Examples
 
@@ -148,7 +135,7 @@ This `plugin_dir: "."` pattern is correct for both single-plugin repositories an
 
 ### Dogfood the source-repo action bundle
 
-Use this only inside `hashgraph-online/codex-plugin-scanner`, where the action can install the adjacent source tree directly.
+Use this only inside `hashgraph-online/ai-plugin-scanner`, where the action can install the adjacent source tree directly.
 
 ```yaml
 - uses: ./action
@@ -209,56 +196,29 @@ jobs:
 
 Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-plugins`. `submission_token` is required when `submission_enabled: true`. The action deduplicates by an exact hidden plugin URL marker in the issue body, so repeated pushes reuse the open submission issue instead of opening duplicates.
 
-### Native sticky PR summary comment
+### Markdown report as PR comment
 
 ```yaml
 - uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
   id: scan
   with:
     plugin_dir: "."
-    mode: scan
-    format: json
-    output: scanner-report.json
-    pr_comment: auto
-    pr_comment_style: concise
-    pr_comment_max_findings: 5
-```
+    format: markdown
+    output: scan-report.md
 
-`pr_comment: auto` updates a single sticky comment when the workflow runs on a PR and quietly skips on non-PR events. Use `pr_comment: always` when PR comments are required for policy; that mode fails the action if comment publication fails.
-
-### Advanced sticky comment configuration
-
-```yaml
-permissions:
-  contents: read
-  pull-requests: write
-  security-events: write
-
-- uses: hashgraph-online/hol-codex-plugin-scanner-action@v1
+- name: Comment PR
+  uses: actions/github-script@v7
   with:
-    plugin_dir: "."
-    mode: scan
-    format: sarif
-    upload_sarif: true
-    pr_comment: always
-    pr_comment_style: full
-    pr_comment_header: scanner-main-scan
-    pr_comment_token: ${{ secrets.SCANNER_PR_COMMENT_TOKEN }}
+    script: |
+      const fs = require('fs');
+      const report = fs.readFileSync('scan-report.md', 'utf8');
+      github.rest.issues.createComment({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        body: report
+      });
 ```
-
-Recommended minimum permissions for PR-comment workflows:
-
-```yaml
-permissions:
-  contents: read
-  pull-requests: write
-  security-events: write
-```
-
-Fork PR note:
-
-- On forked PR events, `github.token` may not have permission to create comments. In `pr_comment: auto`, the action reports `pr_comment_status=skipped` without failing the run.
-- `pull_request_target` is not the default recommendation because it changes the threat model for untrusted PR content.
 
 ## Release Management
 
@@ -273,11 +233,11 @@ Fork PR note:
 
 The source bundle for this action lives in the main scanner repository under `action/`. Release artifacts from that repository should export a root-ready action bundle for the dedicated Marketplace repository.
 
-Direct edits in this Marketplace repository should stay limited to Marketplace-specific copy or metadata. Functional changes and release publication logic belong in `hashgraph-online/codex-plugin-scanner` so merges there can publish a matching action release automatically.
+Direct edits in this Marketplace repository should stay limited to Marketplace-specific copy or metadata. Functional changes and release publication logic belong in `hashgraph-online/ai-plugin-scanner` so merges there can publish a matching action release automatically.
 
 ## License
 
-[Apache-2.0](https://github.com/hashgraph-online/codex-plugin-scanner/blob/main/LICENSE)
+[Apache-2.0](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
 
 ## Mode-based workflow
 
@@ -294,31 +254,6 @@ For `submit` mode, point `plugin_dir` at one concrete plugin directory. Reposito
 
 For `scan` mode, set `upload_sarif: true` to emit and upload SARIF automatically instead of wiring a separate upload step by hand.
 
-## Troubleshooting
-
-### Why didn't I get a PR comment?
-
-- Check `pr_comment_status` and `pr_comment_reason` outputs.
-- Verify the run was a PR event and token permissions include `pull-requests: write` or `issues: write`.
-- With `pr_comment: auto`, permission failures are non-fatal and reported as `skipped`.
-
-### Why did the action fail after posting a comment?
-
-- The action emits `action_exit_code` and `action_exit_reason`.
-- The final enforcement step fails the job when scanner execution fails.
-
-### Why is there only one scanner comment for multiple runs?
-
-- Sticky mode updates one marker comment per mode/profile/target by design.
-- Change `pr_comment_header` if you intentionally want separate independent scanner comments.
-
-### How do summary, PR comment, SARIF, and submission issues differ?
-
-- Job summary: quick run recap in Actions UI.
-- PR comment: reviewer-visible sticky summary in the PR conversation.
-- SARIF: code scanning ingestion and security tab surfacing.
-- Submission issue: optional cross-repo ecosystem submission workflow.
-
 ## Container Distribution
 
 The scanner is also published as an OCI image for container-first environments:
@@ -326,7 +261,7 @@ The scanner is also published as an OCI image for container-first environments:
 ```bash
 docker run --rm \
   -v "$PWD:/workspace" \
-  ghcr.io/hashgraph-online/codex-plugin-scanner:<version> \
+  ghcr.io/hashgraph-online/ai-plugin-scanner:<version> \
   scan /workspace --format text
 ```
 
