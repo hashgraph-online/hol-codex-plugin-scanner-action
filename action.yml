@@ -115,6 +115,34 @@ inputs:
     description: "Override the plugin author used in the submission issue"
     required: false
     default: ""
+  pr_comment:
+    description: "Publish a sticky PR summary comment: off, auto, or always"
+    required: false
+    default: "off"
+  pr_comment_style:
+    description: "PR comment detail level: concise or full"
+    required: false
+    default: "concise"
+  pr_comment_header:
+    description: "Optional sticky comment header override; defaults to mode/profile/plugin_dir"
+    required: false
+    default: ""
+  pr_comment_max_findings:
+    description: "Maximum number of top findings shown in the PR comment"
+    required: false
+    default: "3"
+  pr_comment_token:
+    description: "Optional token for PR comments. Defaults to github.token; requires pull-requests:write or issues:write."
+    required: false
+    default: ""
+  pr_comment_skip_if_unchanged:
+    description: "Skip updating the sticky PR comment when the rendered body is unchanged"
+    required: false
+    default: "true"
+  pr_comment_compare_to_previous:
+    description: "Include metric deltas versus the previous scanner comment on this PR"
+    required: false
+    default: "true"
 
 outputs:
   score:
@@ -156,6 +184,24 @@ outputs:
   submission_issue_numbers:
     description: "Comma-separated issue numbers for submission issues created or reused"
     value: ${{ steps.scan.outputs.submission_issue_numbers }}
+  pr_comment_status:
+    description: "PR comment result: disabled, skipped, created, updated, unchanged, or failed"
+    value: ${{ steps.pr_comment.outputs.pr_comment_status }}
+  pr_comment_url:
+    description: "URL of the sticky PR comment when created/updated/found"
+    value: ${{ steps.pr_comment.outputs.pr_comment_url }}
+  pr_comment_id:
+    description: "Numeric GitHub issue-comment ID when available"
+    value: ${{ steps.pr_comment.outputs.pr_comment_id }}
+  pr_comment_reason:
+    description: "Reason for a skipped/failed PR comment operation"
+    value: ${{ steps.pr_comment.outputs.pr_comment_reason }}
+  action_exit_code:
+    description: "Final scanner execution code after orchestration"
+    value: ${{ steps.outcome.outputs.action_exit_code }}
+  action_exit_reason:
+    description: "Human-readable reason for scanner failure"
+    value: ${{ steps.outcome.outputs.action_exit_reason }}
 
 branding:
   icon: "check-circle"
@@ -234,6 +280,7 @@ runs:
 
     - name: Run scanner
       id: scan
+      continue-on-error: true
       shell: bash
       env:
         MODE: ${{ inputs.mode }}
@@ -264,9 +311,275 @@ runs:
         GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
       run: python3 -m codex_plugin_scanner.action_runner
 
+    - name: Derive action outcome
+      id: outcome
+      shell: bash
+      run: |
+        if [ "${{ steps.scan.outcome }}" = "failure" ]; then
+          echo "action_exit_code=1" >> "$GITHUB_OUTPUT"
+          echo "action_exit_reason=scanner command failed before completion" >> "$GITHUB_OUTPUT"
+        else
+          echo "action_exit_code=0" >> "$GITHUB_OUTPUT"
+          echo "action_exit_reason=" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Publish sticky PR comment
+      id: pr_comment
+      uses: actions/github-script@v7
+      env:
+        PR_COMMENT_MODE: ${{ inputs.pr_comment }}
+        PR_COMMENT_STYLE: ${{ inputs.pr_comment_style }}
+        PR_COMMENT_HEADER: ${{ inputs.pr_comment_header }}
+        PR_COMMENT_MAX_FINDINGS: ${{ inputs.pr_comment_max_findings }}
+        PR_COMMENT_SKIP_IF_UNCHANGED: ${{ inputs.pr_comment_skip_if_unchanged }}
+        PR_COMMENT_COMPARE_TO_PREVIOUS: ${{ inputs.pr_comment_compare_to_previous }}
+        SCAN_OUTCOME: ${{ steps.scan.outcome }}
+        SCAN_MODE: ${{ inputs.mode }}
+        SCAN_PROFILE: ${{ inputs.profile }}
+        SCAN_PLUGIN_DIR: ${{ inputs.plugin_dir }}
+        SCAN_FORMAT: ${{ inputs.format }}
+        SCAN_OUTPUT_PATH: ${{ inputs.output }}
+        SCAN_SCORE: ${{ steps.scan.outputs.score }}
+        SCAN_GRADE: ${{ steps.scan.outputs.grade }}
+        SCAN_GRADE_LABEL: ${{ steps.scan.outputs.grade_label }}
+        SCAN_POLICY_PASS: ${{ steps.scan.outputs.policy_pass }}
+        SCAN_VERIFY_PASS: ${{ steps.scan.outputs.verify_pass }}
+        SCAN_MAX_SEVERITY: ${{ steps.scan.outputs.max_severity }}
+        SCAN_FINDINGS_TOTAL: ${{ steps.scan.outputs.findings_total }}
+        SCAN_SUBMISSION_ELIGIBLE: ${{ steps.scan.outputs.submission_eligible }}
+        SCAN_SUBMISSION_URLS: ${{ steps.scan.outputs.submission_issue_urls }}
+      with:
+        github-token: ${{ inputs.pr_comment_token != '' && inputs.pr_comment_token || github.token }}
+        script: |
+          const core = require("@actions/core");
+          const fs = require("node:fs");
+
+          const mode = (process.env.PR_COMMENT_MODE || "off").toLowerCase().trim();
+          const style = (process.env.PR_COMMENT_STYLE || "concise").toLowerCase().trim();
+          const explicitHeader = (process.env.PR_COMMENT_HEADER || "").trim();
+          const maxFindings = Math.max(0, Number.parseInt(process.env.PR_COMMENT_MAX_FINDINGS || "3", 10) || 3);
+          const skipIfUnchanged = (process.env.PR_COMMENT_SKIP_IF_UNCHANGED || "true").toLowerCase() === "true";
+          const compareToPrevious = (process.env.PR_COMMENT_COMPARE_TO_PREVIOUS || "true").toLowerCase() === "true";
+          const eventName = context.eventName;
+          const issueNumber = context.payload?.pull_request?.number;
+
+          const setOutcome = (status, reason = "", url = "", id = "") => {
+            core.setOutput("pr_comment_status", status);
+            core.setOutput("pr_comment_reason", reason);
+            core.setOutput("pr_comment_url", url);
+            core.setOutput("pr_comment_id", id);
+          };
+
+          if (mode === "off") {
+            setOutcome("disabled");
+            return;
+          }
+
+          try {
+            if (!["pull_request", "pull_request_target"].includes(eventName)) {
+              setOutcome("skipped", "not a pull request event");
+              return;
+            }
+            if (!issueNumber) {
+              setOutcome("skipped", "no pull request number in event payload");
+              return;
+            }
+
+            const scanMode = process.env.SCAN_MODE || "scan";
+            const scanProfile = process.env.SCAN_PROFILE || "default";
+            const scanPluginDir = process.env.SCAN_PLUGIN_DIR || ".";
+            const scanOutcome = process.env.SCAN_OUTCOME || "success";
+            const score = process.env.SCAN_SCORE || "";
+            const grade = process.env.SCAN_GRADE || "";
+            const gradeLabel = process.env.SCAN_GRADE_LABEL || "";
+            const maxSeverity = process.env.SCAN_MAX_SEVERITY || (scanOutcome === "failure" ? "unknown" : "none");
+            const findingsTotal = process.env.SCAN_FINDINGS_TOTAL || "";
+            const policyPass = process.env.SCAN_POLICY_PASS || "";
+            const verifyPass = process.env.SCAN_VERIFY_PASS || "";
+            const submissionEligible = process.env.SCAN_SUBMISSION_ELIGIBLE || "";
+            const submissionUrls = (process.env.SCAN_SUBMISSION_URLS || "").split(",").filter(Boolean);
+            const workflowUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const scanFormat = process.env.SCAN_FORMAT || "text";
+            const scanOutputPath = process.env.SCAN_OUTPUT_PATH || "";
+
+            const computedHeader = explicitHeader || `mode=${scanMode};profile=${scanProfile};target=${scanPluginDir}`;
+            const marker = `<!-- hol-codex-plugin-scanner:${computedHeader} -->`;
+            const dataPrefix = "<!-- hol-codex-plugin-scanner-data:";
+            const dataSuffix = " -->";
+            const severityRank = { none: 0, info: 1, low: 2, medium: 3, high: 4, critical: 5, unknown: 6 };
+
+            let reportJson = null;
+            let reportText = "";
+            if (scanOutputPath && fs.existsSync(scanOutputPath)) {
+              reportText = fs.readFileSync(scanOutputPath, "utf8");
+              if (scanFormat === "json") {
+                try {
+                  reportJson = JSON.parse(reportText);
+                } catch {
+                  reportJson = null;
+                }
+              }
+            }
+
+            const findings = Array.isArray(reportJson?.findings) ? reportJson.findings : [];
+            findings.sort((a, b) => {
+              const aRank = severityRank[String(a?.severity || "none")] || 0;
+              const bRank = severityRank[String(b?.severity || "none")] || 0;
+              if (aRank !== bRank) return bRank - aRank;
+              return String(a?.title || "").localeCompare(String(b?.title || ""));
+            });
+            const topFindings = findings.slice(0, maxFindings);
+
+            const renderBool = (value) => {
+              if (value === "true") return "yes";
+              if (value === "false") return "no";
+              return "n/a";
+            };
+
+            const lines = [
+              "## HOL Codex Plugin Scanner",
+              "",
+              `- Mode: ${scanMode}`,
+              `- Target: \`${scanPluginDir}\``,
+              `- Scanner status: ${scanOutcome === "success" ? "pass" : "fail"}`,
+              score ? `- Score: ${score}/100` : "- Score: n/a",
+              grade ? `- Grade: ${grade}${gradeLabel ? ` - ${gradeLabel}` : ""}` : "- Grade: n/a",
+              `- Max severity: ${maxSeverity || "none"}`,
+              findingsTotal ? `- Findings: ${findingsTotal}` : "- Findings: n/a",
+              `- Policy pass: ${renderBool(policyPass)}`,
+              `- Verify pass: ${renderBool(verifyPass)}`,
+              `- Submission eligible: ${renderBool(submissionEligible)}`,
+              `- Workflow run: [view run](${workflowUrl})`,
+            ];
+
+            if (submissionUrls.length > 0) {
+              lines.push(`- Submission issues: ${submissionUrls.join(", ")}`);
+            }
+
+            const snapshot = {
+              mode: scanMode,
+              profile: scanProfile,
+              plugin_dir: scanPluginDir,
+              scan_outcome: scanOutcome,
+              score: score ? Number.parseInt(score, 10) : null,
+              findings_total: findingsTotal ? Number.parseInt(findingsTotal, 10) : null,
+              max_severity: maxSeverity || null,
+            };
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+
+            const matching = comments
+              .filter((comment) => typeof comment.body === "string" && comment.body.includes(marker))
+              .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+            const current = matching[0] ?? null;
+            const previous = matching[1] ?? null;
+
+            if (compareToPrevious && previous && typeof previous.body === "string") {
+              const start = previous.body.indexOf(dataPrefix);
+              if (start >= 0) {
+                const end = previous.body.indexOf(dataSuffix, start);
+                if (end > start) {
+                  try {
+                    const encoded = previous.body.slice(start + dataPrefix.length, end).trim();
+                    const prior = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
+                    const deltas = [];
+                    if (typeof snapshot.score === "number" && typeof prior.score === "number") {
+                      const delta = snapshot.score - prior.score;
+                      if (delta !== 0) {
+                        deltas.push(`score ${delta > 0 ? "+" : ""}${delta}`);
+                      }
+                    }
+                    if (typeof snapshot.findings_total === "number" && typeof prior.findings_total === "number") {
+                      const delta = snapshot.findings_total - prior.findings_total;
+                      if (delta !== 0) {
+                        deltas.push(`findings ${delta > 0 ? "+" : ""}${delta}`);
+                      }
+                    }
+                    if (deltas.length > 0) {
+                      lines.push(`- Delta vs previous scanner run: ${deltas.join(", ")}`);
+                    }
+                  } catch {
+                    // Ignore malformed historical payloads
+                  }
+                }
+              }
+            }
+
+            if (topFindings.length > 0) {
+              lines.push("", "### Top Findings");
+              for (const finding of topFindings) {
+                const severity = String(finding?.severity || "unknown");
+                const title = String(finding?.title || "Untitled finding");
+                lines.push(`- [${severity}] ${title}`);
+              }
+            }
+
+            if (style === "full" && scanFormat === "markdown" && reportText.trim().length > 0) {
+              lines.push("", "<details>", "<summary>Full Markdown Report</summary>", "", reportText.trim(), "", "</details>");
+            }
+
+            const encodedSnapshot = Buffer.from(JSON.stringify(snapshot), "utf8").toString("base64");
+            const body = `${lines.join("\n")}\n\n${marker}\n${dataPrefix}${encodedSnapshot}${dataSuffix}`;
+
+            if (current && skipIfUnchanged && current.body === body) {
+              setOutcome("unchanged", "", current.html_url, String(current.id));
+              return;
+            }
+
+            try {
+              if (current) {
+                const { data } = await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: current.id,
+                  body,
+                });
+                setOutcome("updated", "", data.html_url, String(data.id));
+              } else {
+                const { data } = await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body,
+                });
+                setOutcome("created", "", data.html_url, String(data.id));
+              }
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "unknown error";
+              if (mode === "always") {
+                setOutcome("failed", message);
+                core.setFailed(`pull request comment failed: ${message}`);
+                return;
+              }
+              setOutcome("skipped", `comment publication failed: ${message}`);
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "unknown error";
+            if (mode === "always") {
+              setOutcome("failed", message);
+              core.setFailed(`pull request comment failed: ${message}`);
+              return;
+            }
+            setOutcome("skipped", `comment publication failed: ${message}`);
+          }
+
     - name: Upload SARIF
-      if: ${{ inputs.upload_sarif == 'true' && inputs.mode == 'scan' && steps.scan.outputs.report_path != '' }}
+      if: ${{ always() && inputs.upload_sarif == 'true' && inputs.mode == 'scan' && steps.scan.outputs.report_path != '' }}
       uses: github/codeql-action/upload-sarif@51f77329afa6477de8c49fc9c7046c15b9a4e79d
       with:
         sarif_file: ${{ steps.scan.outputs.report_path }}
         category: ${{ inputs.sarif_category }}
+
+    - name: Enforce scanner execution
+      if: ${{ steps.scan.outcome == 'failure' }}
+      shell: bash
+      run: |
+        if [ -n "${{ steps.outcome.outputs.action_exit_reason }}" ]; then
+          echo "${{ steps.outcome.outputs.action_exit_reason }}" >&2
+        fi
+        exit 1
