@@ -48,7 +48,7 @@ inputs:
     required: false
     default: "true"
   registry_payload_output:
-    description: "Write a machine-readable Codex ecosystem payload JSON file for registry or awesome-list automation"
+    description: "Write a machine-readable plugin ecosystem payload JSON file for registry or awesome-list automation"
     required: false
     default: ""
   min_score:
@@ -68,9 +68,13 @@ inputs:
     required: false
     default: "balanced"
   install_cisco:
-    description: "Install the published Cisco skill-scanner dependency used by this repo"
+    description: "Install the opt-in Cisco skill-scanner dependency used by this repo"
     required: false
     default: "false"
+  install_source:
+    description: "Package install source: pypi for the reviewed release path, or local for source-repo dogfooding"
+    required: false
+    default: "pypi"
   submission_enabled:
     description: "Open submission issues for awesome-list and registry automation when the plugin clears the submission threshold"
     required: false
@@ -138,7 +142,7 @@ outputs:
     description: "The path to the rendered report file, if output was requested"
     value: ${{ steps.scan.outputs.report_path }}
   registry_payload_path:
-    description: "The path to the machine-readable Codex ecosystem payload file, if requested"
+    description: "The path to the machine-readable plugin ecosystem payload file, if requested"
     value: ${{ steps.scan.outputs.registry_payload_path }}
   submission_eligible:
     description: "Whether the plugin met the submission threshold and passed the configured severity gate"
@@ -167,6 +171,9 @@ runs:
 
     - name: Install scanner
       shell: bash
+      env:
+        INSTALL_SOURCE: ${{ inputs.install_source }}
+        INSTALL_CISCO: ${{ inputs.install_cisco }}
       run: |
         LOCAL_SOURCE=""
         for candidate in "$GITHUB_ACTION_PATH" "$GITHUB_ACTION_PATH/.."; do
@@ -176,18 +183,53 @@ runs:
           fi
         done
 
-        if [ -n "$LOCAL_SOURCE" ]; then
-          if [ "${{ inputs.install_cisco }}" = "true" ]; then
-            pip install "$LOCAL_SOURCE[cisco]"
+        if [ "$INSTALL_SOURCE" = "local" ]; then
+          if [ -z "$LOCAL_SOURCE" ]; then
+            echo "install_source=local requires the source repository checkout (for example: uses: ./action inside ai-plugin-scanner)." >&2
+            exit 1
+          fi
+          if [ "$INSTALL_CISCO" = "true" ]; then
+            python3 -m pip install "$LOCAL_SOURCE[cisco]"
           else
-            pip install "$LOCAL_SOURCE"
+            python3 -m pip install "$LOCAL_SOURCE"
+          fi
+        elif [ "$INSTALL_SOURCE" = "pypi" ]; then
+          SCANNER_VERSION_FILE="$GITHUB_ACTION_PATH/scanner-version.txt"
+          CISCO_VERSION_FILE="$GITHUB_ACTION_PATH/cisco-version.txt"
+          PYPI_ATTESTATIONS_VERSION_FILE="$GITHUB_ACTION_PATH/pypi-attestations-version.txt"
+          if [ ! -f "$SCANNER_VERSION_FILE" ] || [ ! -f "$CISCO_VERSION_FILE" ] || [ ! -f "$PYPI_ATTESTATIONS_VERSION_FILE" ]; then
+            echo "Action install metadata files are missing from the Marketplace bundle." >&2
+            exit 1
+          fi
+
+          SCANNER_VERSION="$(tr -d '[:space:]' < "$SCANNER_VERSION_FILE")"
+          CISCO_VERSION="$(tr -d '[:space:]' < "$CISCO_VERSION_FILE")"
+          PYPI_ATTESTATIONS_VERSION="$(tr -d '[:space:]' < "$PYPI_ATTESTATIONS_VERSION_FILE")"
+          SCANNER_REPOSITORY="https://github.com/hashgraph-online/ai-plugin-scanner"
+          DIST_DIR="${RUNNER_TEMP:-$GITHUB_WORKSPACE/.ai-plugin-scanner-dist}"
+          mkdir -p "$DIST_DIR"
+
+          python3 -m pip install "pypi-attestations==${PYPI_ATTESTATIONS_VERSION}"
+          python3 -m pip download --only-binary=:all: --no-deps --dest "$DIST_DIR" "codex-plugin-scanner==${SCANNER_VERSION}"
+
+          DIST_BASENAME="$(
+            DIST_DIR="$DIST_DIR" python3 -c "import os; from pathlib import Path; dist_dir = Path(os.environ['DIST_DIR']); candidates = sorted(dist_dir.glob('codex_plugin_scanner-*.whl')); expected = len(candidates) == 1; print(candidates[0].name) if expected else (_ for _ in ()).throw(SystemExit(f'Expected exactly one downloaded scanner wheel, found {len(candidates)}'))"
+          )"
+
+          if ! python3 -m pypi_attestations verify pypi \
+            --repository "$SCANNER_REPOSITORY" \
+            "pypi:${DIST_BASENAME}"; then
+            echo "Failed to verify PyPI provenance for codex-plugin-scanner==${SCANNER_VERSION}." >&2
+            exit 1
+          fi
+
+          python3 -m pip install "$DIST_DIR/$DIST_BASENAME"
+          if [ "$INSTALL_CISCO" = "true" ]; then
+            python3 -m pip install "cisco-ai-skill-scanner==${CISCO_VERSION}"
           fi
         else
-          if [ "${{ inputs.install_cisco }}" = "true" ]; then
-            pip install "plugin-scanner[cisco]" || pip install "codex-plugin-scanner[cisco]"
-          else
-            pip install plugin-scanner || pip install codex-plugin-scanner
-          fi
+          echo "Unsupported install_source: $INSTALL_SOURCE" >&2
+          exit 1
         fi
 
     - name: Run scanner

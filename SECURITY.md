@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security issue in this action or in the underlying scanner, please report it privately:
+If you discover a security vulnerability in this project, please report it responsibly:
 
 1. Do not open a public issue.
 2. Email us at security@hol.org with details.
@@ -50,4 +50,3 @@ This tool helps you follow security best practices for AI plugin repositories. F
 - This scanner checks for common patterns but does not guarantee security.
 - Always review plugin code manually before installation.
 - Keep this tool updated for the latest check definitions.
-- Pin the action to a reviewed major or immutable release tag in your workflows.
