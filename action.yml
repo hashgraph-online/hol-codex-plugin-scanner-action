@@ -356,7 +356,9 @@ runs:
           const mode = (process.env.PR_COMMENT_MODE || "off").toLowerCase().trim();
           const style = (process.env.PR_COMMENT_STYLE || "concise").toLowerCase().trim();
           const explicitHeader = (process.env.PR_COMMENT_HEADER || "").trim();
-          const maxFindings = Math.max(0, Number.parseInt(process.env.PR_COMMENT_MAX_FINDINGS || "3", 10) || 3);
+          const rawMaxFindings = process.env.PR_COMMENT_MAX_FINDINGS ?? "";
+          const parsedMaxFindings = Number.parseInt(rawMaxFindings, 10);
+          const maxFindings = Number.isNaN(parsedMaxFindings) ? 3 : Math.max(0, parsedMaxFindings);
           const skipIfUnchanged = (process.env.PR_COMMENT_SKIP_IF_UNCHANGED || "true").toLowerCase() === "true";
           const compareToPrevious = (process.env.PR_COMMENT_COMPARE_TO_PREVIOUS || "true").toLowerCase() === "true";
           const eventName = context.eventName;
@@ -406,6 +408,14 @@ runs:
             const dataPrefix = "<!-- hol-codex-plugin-scanner-data:";
             const dataSuffix = " -->";
             const severityRank = { none: 0, info: 1, low: 2, medium: 3, high: 4, critical: 5, unknown: 6 };
+            const normalizeSarifSeverity = (value) => {
+              const lowered = String(value || "").toLowerCase();
+              if (["critical", "high"].includes(lowered)) return lowered;
+              if (["error"].includes(lowered)) return "high";
+              if (["warning", "medium"].includes(lowered)) return "medium";
+              if (["low"].includes(lowered)) return "low";
+              return "info";
+            };
 
             let reportJson = null;
             let reportText = "";
@@ -420,7 +430,21 @@ runs:
               }
             }
 
-            const findings = Array.isArray(reportJson?.findings) ? reportJson.findings : [];
+            let findings = [];
+            if (Array.isArray(reportJson?.findings)) {
+              findings = reportJson.findings;
+            } else if (scanFormat === "sarif" && Array.isArray(reportJson?.runs)) {
+              findings = reportJson.runs
+                .flatMap((run) => (Array.isArray(run?.results) ? run.results : []))
+                .map((result) => {
+                  const message = typeof result?.message?.text === "string" ? result.message.text : "";
+                  const ruleId = typeof result?.ruleId === "string" ? result.ruleId : "SARIF finding";
+                  return {
+                    severity: normalizeSarifSeverity(result?.properties?.severity || result?.level),
+                    title: message || ruleId,
+                  };
+                });
+            }
             findings.sort((a, b) => {
               const aRank = severityRank[String(a?.severity || "none")] || 0;
               const bRank = severityRank[String(b?.severity || "none")] || 0;
@@ -524,7 +548,15 @@ runs:
             }
 
             const encodedSnapshot = Buffer.from(JSON.stringify(snapshot), "utf8").toString("base64");
-            const body = `${lines.join("\n")}\n\n${marker}\n${dataPrefix}${encodedSnapshot}${dataSuffix}`;
+            const footer = `\n\n${marker}\n${dataPrefix}${encodedSnapshot}${dataSuffix}`;
+            const maxCommentLength = 65536;
+            const truncateNotice = "\n\n... [report truncated due to size limit]";
+            let bodyContent = lines.join("\n");
+            if (bodyContent.length + footer.length > maxCommentLength) {
+              const maxBodyContent = Math.max(0, maxCommentLength - footer.length - truncateNotice.length);
+              bodyContent = `${bodyContent.slice(0, maxBodyContent)}${truncateNotice}`;
+            }
+            const body = `${bodyContent}${footer}`;
 
             if (current && skipIfUnchanged && current.body === body) {
               setOutcome("unchanged", "", current.html_url, String(current.id));
