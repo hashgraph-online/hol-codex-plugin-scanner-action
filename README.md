@@ -60,6 +60,9 @@ Advanced distribution paths are available when you need them:
 | `submission_plugin_url` | Override the plugin repository URL used in the submission issue | `""` |
 | `submission_plugin_description` | Override the plugin description used in the submission issue | `""` |
 | `submission_author` | Override the plugin author used in the submission issue | `""` |
+| `pr_comment` | PR comment mode: `auto`, `always`, or `off` | `auto` |
+| `pr_comment_style` | PR comment style: `concise` or `detailed` | `concise` |
+| `pr_comment_max_findings` | Maximum findings to include in PR comment summaries | `5` |
 
 ## Outputs
 
@@ -78,6 +81,10 @@ Advanced distribution paths are available when you need them:
 | `submission_performed` | `true` when a submission issue was created or an existing one was reused |
 | `submission_issue_urls` | Comma-separated submission issue URLs |
 | `submission_issue_numbers` | Comma-separated submission issue numbers |
+| `action_exit_code` | Action execution exit code |
+| `pr_comment_status` | PR comment status (`created`, `updated`, `unchanged`, `skipped`, `disabled`) |
+| `pr_comment_id` | PR comment ID when available |
+| `pr_comment_url` | PR comment URL when available |
 
 The action also writes a concise summary to `GITHUB_STEP_SUMMARY` by default. The full report is written to the job log for `text` output, or to the file you pass through `output` for `json`, `markdown`, or `sarif`.
 
@@ -87,6 +94,7 @@ Mode notes:
 - `verify` respects `online` and writes a human-readable report for `format: text`.
 - `submit` writes the plugin-quality artifact to `output` when provided, otherwise `plugin-quality.json`. `registry_payload_output` remains dedicated to the separate HOL registry payload.
 - `online`, `submission_enabled`, and `upload_sarif` are the only common paths that intentionally reach beyond the runner after the scanner package itself has been installed.
+- `pr_comment_status` currently defaults to `skipped` in this Marketplace wrapper path.
 
 ## Examples
 
