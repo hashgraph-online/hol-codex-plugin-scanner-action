@@ -1,16 +1,16 @@
-# HOL AI Plugin Scanner GitHub Action
+# AI Plugin Scanner GitHub Action
 
 [![Latest Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)
 [![Marketplace Repository](https://img.shields.io/badge/github-marketplace_repo-0A84FF)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)
 [![Source of Truth](https://img.shields.io/badge/source-ai--plugin--scanner-111827)](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
 
-| ![Hashgraph Online Logo](https://hol.org/brand/Logo_Whole_Dark.png) | Marketplace-ready GitHub Action for scanning AI plugin repositories (including Codex, Claude, Gemini, and OpenCode ecosystems) for security, publishability, runtime readiness, and trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)<br>[Marketplace Repository](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/ai-plugin-scanner/issues) |
+| ![Hashgraph Online Logo](https://hol.org/brand/Logo_Whole_Dark.png) | Marketplace-ready GitHub Action for scanning AI plugin repositories across Codex, Claude, Gemini, and OpenCode ecosystems for security, publishability, runtime readiness, and trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)<br>[Marketplace Repository](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/ai-plugin-scanner/issues) |
 | :--- | :--- |
 
 This repository is the Marketplace-facing wrapper for the scanner action. The main scanner repo remains the source of truth, while this published action bundle keeps the required root `action.yml` layout for GitHub Marketplace.
 
-The default Marketplace install path uses an exact `codex-plugin-scanner` PyPI release, verifies its PyPI provenance against `hashgraph-online/ai-plugin-scanner`, and only then installs it. After installation, the default `scan`, `lint`, and offline `verify` paths operate on local repository content only. Live network probing and submission automation remain explicit opt-in features.
+Use `hashgraph-online/hol-codex-plugin-scanner-action@v1` in workflows today. The action installs the reviewed `plugin-scanner` release, verifies its PyPI provenance against `hashgraph-online/ai-plugin-scanner`, and then runs locally by default for `scan`, `lint`, and offline `verify`. Live network probing and submission automation stay opt-in.
 
 Advanced distribution paths are available when you need them:
 
@@ -37,7 +37,7 @@ Advanced distribution paths are available when you need them:
 | `format` | Output format: `text`, `json`, `markdown`, `sarif` | `text` |
 | `output` | Write report to this file path | `""` |
 | `profile` | Policy profile: `default`, `public-marketplace`, or `strict-security` | `default` |
-| `config` | Optional path to `.codex-plugin-scanner.toml` | `""` |
+| `config` | Optional path to a scanner config file such as `.plugin-scanner.toml` | `""` |
 | `baseline` | Optional path to a baseline suppression file | `""` |
 | `online` | Enable live network probing for `verify` mode | `false` |
 | `upload_sarif` | Upload the generated SARIF report to GitHub code scanning when `mode: scan` | `false` |

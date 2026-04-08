@@ -1,4 +1,4 @@
-name: "HOL AI Plugin Scanner"
+name: "AI Plugin Scanner"
 description: "Scan AI plugin repositories for security, publishability, and best-practice quality signals."
 author: "HOL"
 
@@ -24,7 +24,7 @@ inputs:
     required: false
     default: "default"
   config:
-    description: "Optional path to .codex-plugin-scanner.toml"
+    description: "Optional path to a scanner config file such as .plugin-scanner.toml"
     required: false
     default: ""
   baseline:
@@ -234,16 +234,16 @@ runs:
           mkdir -p "$DIST_DIR"
 
           python3 -m pip install "pypi-attestations==${PYPI_ATTESTATIONS_VERSION}"
-          python3 -m pip download --only-binary=:all: --no-deps --dest "$DIST_DIR" "codex-plugin-scanner==${SCANNER_VERSION}"
+          python3 -m pip download --only-binary=:all: --no-deps --dest "$DIST_DIR" "plugin-scanner==${SCANNER_VERSION}"
 
           DIST_BASENAME="$(
-            DIST_DIR="$DIST_DIR" python3 -c "import os; from pathlib import Path; dist_dir = Path(os.environ['DIST_DIR']); candidates = sorted(dist_dir.glob('codex_plugin_scanner-*.whl')); expected = len(candidates) == 1; print(candidates[0].name) if expected else (_ for _ in ()).throw(SystemExit(f'Expected exactly one downloaded scanner wheel, found {len(candidates)}'))"
+            DIST_DIR="$DIST_DIR" python3 -c "import os; from pathlib import Path; dist_dir = Path(os.environ['DIST_DIR']); candidates = sorted(dist_dir.glob('plugin_scanner-*.whl')); expected = len(candidates) == 1; print(candidates[0].name) if expected else (_ for _ in ()).throw(SystemExit(f'Expected exactly one downloaded scanner wheel, found {len(candidates)}'))"
           )"
 
           if ! python3 -m pypi_attestations verify pypi \
             --repository "$SCANNER_REPOSITORY" \
             "pypi:${DIST_BASENAME}"; then
-            echo "Failed to verify PyPI provenance for codex-plugin-scanner==${SCANNER_VERSION}." >&2
+            echo "Failed to verify PyPI provenance for plugin-scanner==${SCANNER_VERSION}." >&2
             exit 1
           fi
 
@@ -293,12 +293,31 @@ runs:
 
     - name: Normalize action outputs
       id: normalized_outputs
+      if: ${{ always() }}
       shell: bash
+      env:
+        SCAN_OUTCOME: ${{ steps.scan.outcome }}
+        ACTION_EXIT_CODE: ${{ steps.scan.outputs.action_exit_code }}
+        PR_COMMENT_STATUS: ${{ steps.scan.outputs.pr_comment_status }}
+        PR_COMMENT_ID: ${{ steps.scan.outputs.pr_comment_id }}
+        PR_COMMENT_URL: ${{ steps.scan.outputs.pr_comment_url }}
       run: |
-        echo "action_exit_code=0" >> "$GITHUB_OUTPUT"
-        echo "pr_comment_status=skipped" >> "$GITHUB_OUTPUT"
-        echo "pr_comment_id=" >> "$GITHUB_OUTPUT"
-        echo "pr_comment_url=" >> "$GITHUB_OUTPUT"
+        if [ -n "$ACTION_EXIT_CODE" ]; then
+          echo "action_exit_code=$ACTION_EXIT_CODE" >> "$GITHUB_OUTPUT"
+        elif [ "$SCAN_OUTCOME" = "success" ]; then
+          echo "action_exit_code=0" >> "$GITHUB_OUTPUT"
+        else
+          echo "action_exit_code=1" >> "$GITHUB_OUTPUT"
+        fi
+
+        if [ -n "$PR_COMMENT_STATUS" ]; then
+          echo "pr_comment_status=$PR_COMMENT_STATUS" >> "$GITHUB_OUTPUT"
+        else
+          echo "pr_comment_status=skipped" >> "$GITHUB_OUTPUT"
+        fi
+
+        echo "pr_comment_id=$PR_COMMENT_ID" >> "$GITHUB_OUTPUT"
+        echo "pr_comment_url=$PR_COMMENT_URL" >> "$GITHUB_OUTPUT"
 
     - name: Upload SARIF
       if: ${{ inputs.upload_sarif == 'true' && inputs.mode == 'scan' && steps.scan.outputs.report_path != '' }}

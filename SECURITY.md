@@ -1,4 +1,4 @@
-# Security Policy
+# AI Plugin Scanner Action Security Policy
 
 ## Supported Versions
 
