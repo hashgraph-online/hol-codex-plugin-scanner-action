@@ -1,0 +1,125 @@
+name: Sync Canonical Action Repo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+      - README.canonical.md
+      - CONTRIBUTING.md
+      - SECURITY.md
+      - LICENSE
+      - action.yml
+      - scanner-version.txt
+      - cisco-version.txt
+      - pypi-attestations-version.txt
+      - .github/workflows/e2e-action.yml
+      - .github/workflows/sync-canonical-repo.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    if: github.repository == 'hashgraph-online/hol-codex-plugin-scanner-action'
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_REPOSITORY: hashgraph-online/hol-codex-plugin-scanner-action
+      TARGET_REPOSITORY: hashgraph-online/ai-plugin-scanner-action
+    steps:
+      - name: Checkout legacy compatibility repo
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+
+      - name: Require canonical repo token
+        env:
+          CANONICAL_ACTION_REPO_TOKEN: ${{ secrets.CANONICAL_ACTION_REPO_TOKEN }}
+        run: |
+          if [ -z "$CANONICAL_ACTION_REPO_TOKEN" ]; then
+            echo "CANONICAL_ACTION_REPO_TOKEN is required to sync the canonical action repository." >&2
+            exit 1
+          fi
+
+      - name: Clone canonical repo
+        env:
+          CANONICAL_ACTION_REPO_TOKEN: ${{ secrets.CANONICAL_ACTION_REPO_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${CANONICAL_ACTION_REPO_TOKEN}@github.com/${TARGET_REPOSITORY}.git" canonical-repo
+
+      - name: Sync canonical working tree
+        run: |
+          shared_files=(
+            "action.yml"
+            "CONTRIBUTING.md"
+            "SECURITY.md"
+            "LICENSE"
+            "scanner-version.txt"
+            "cisco-version.txt"
+            "pypi-attestations-version.txt"
+            ".github/workflows/e2e-action.yml"
+          )
+
+          for relative_path in "${shared_files[@]}"; do
+            mkdir -p "canonical-repo/$(dirname "$relative_path")"
+            cp "$relative_path" "canonical-repo/$relative_path"
+          done
+
+          cp "README.canonical.md" "canonical-repo/README.md"
+
+      - name: Update canonical repository metadata
+        env:
+          GH_TOKEN: ${{ secrets.CANONICAL_ACTION_REPO_TOKEN }}
+        run: |
+          gh repo edit "$TARGET_REPOSITORY" \
+            --description "Canonical GitHub Action for AI Plugin Scanner" \
+            --homepage "https://github.com/hashgraph-online/ai-plugin-scanner"
+
+      - name: Commit synced files if needed
+        id: sync_repo
+        run: |
+          cd canonical-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- README.md action.yml CONTRIBUTING.md SECURITY.md LICENSE scanner-version.txt cisco-version.txt pypi-attestations-version.txt .github/workflows/e2e-action.yml; then
+            echo "repo_changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git add README.md action.yml CONTRIBUTING.md SECURITY.md LICENSE scanner-version.txt cisco-version.txt pypi-attestations-version.txt .github/workflows/e2e-action.yml
+          git commit -m "chore: sync canonical action repo"
+          git push origin HEAD:main
+          echo "repo_changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Mirror latest release tag into canonical repo
+        env:
+          GH_TOKEN: ${{ secrets.CANONICAL_ACTION_REPO_TOKEN }}
+        run: |
+          latest_tag="$(gh release view --repo "$SOURCE_REPOSITORY" --json tagName --jq '.tagName')"
+          if [ -z "$latest_tag" ]; then
+            echo "No source release tag found; skipping release sync."
+            exit 0
+          fi
+
+          target_head="$(git -C canonical-repo rev-parse HEAD)"
+
+          if gh release view "$latest_tag" --repo "$TARGET_REPOSITORY" >/dev/null 2>&1; then
+            echo "Canonical release ${latest_tag} already exists."
+          else
+            if git -C canonical-repo ls-remote --exit-code --tags origin "refs/tags/${latest_tag}" >/dev/null 2>&1; then
+              echo "Canonical tag ${latest_tag} already exists without a release; creating release notes only."
+            else
+              git -C canonical-repo tag "$latest_tag" "$target_head"
+              git -C canonical-repo push origin "refs/tags/${latest_tag}"
+            fi
+
+            gh release create "$latest_tag" \
+              --repo "$TARGET_REPOSITORY" \
+              --generate-notes \
+              --target "$target_head" \
+              --title "$latest_tag"
+          fi
+
+          git -C canonical-repo tag -f v1 "$target_head"
+          git -C canonical-repo push origin "refs/tags/v1" --force

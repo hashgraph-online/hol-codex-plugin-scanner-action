@@ -1,17 +1,14 @@
 # AI Plugin Scanner GitHub Action
 
-[![Latest Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/hashgraph-online/ai-plugin-scanner-action?display_name=tag)](https://github.com/hashgraph-online/ai-plugin-scanner-action/releases/latest)
 [![Canonical Repository](https://img.shields.io/badge/github-canonical_repo-0A84FF)](https://github.com/hashgraph-online/ai-plugin-scanner-action)
-[![Legacy Compatibility Repository](https://img.shields.io/badge/github-legacy_slug-475569)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)
 [![Source of Truth](https://img.shields.io/badge/source-ai--plugin--scanner-111827)](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
 
-| ![Hashgraph Online Logo](https://hol.org/brand/Logo_Whole_Dark.png) | Legacy compatibility GitHub Action repository for scanning AI plugin repositories across Codex, Claude, Gemini, and OpenCode ecosystems for security, publishability, runtime readiness, and trust signals. The canonical slug is now [`hashgraph-online/ai-plugin-scanner-action`](https://github.com/hashgraph-online/ai-plugin-scanner-action), while this repository stays live so existing `uses: hashgraph-online/hol-codex-plugin-scanner-action@v1` workflows keep working.<br><br>[Canonical Repository](https://github.com/hashgraph-online/ai-plugin-scanner-action)<br>[Legacy Compatibility Repository](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/ai-plugin-scanner/issues) |
+| ![Hashgraph Online Logo](https://hol.org/brand/Logo_Whole_Dark.png) | Canonical GitHub Action repository for scanning AI plugin repositories across Codex, Claude, Gemini, and OpenCode ecosystems for security, publishability, runtime readiness, and trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/ai-plugin-scanner-action/releases/latest)<br>[Canonical Repository](https://github.com/hashgraph-online/ai-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/ai-plugin-scanner/issues) |
 | :--- | :--- |
 
-This repository is the legacy compatibility wrapper for the scanner action. The main scanner repo remains the source of truth, and the preferred action slug is now `hashgraph-online/ai-plugin-scanner-action@v1`.
-
-Use `hashgraph-online/ai-plugin-scanner-action@v1` in new workflows. Existing `hashgraph-online/hol-codex-plugin-scanner-action@v1` workflows remain supported and receive the same action bundle and release tags through the canonical sync workflow.
+Use `hashgraph-online/ai-plugin-scanner-action@v1` in new workflows. The legacy `hashgraph-online/hol-codex-plugin-scanner-action@v1` slug remains supported for compatibility.
 
 The action installs the reviewed `plugin-scanner` release, verifies its PyPI provenance against `hashgraph-online/ai-plugin-scanner`, and then runs locally by default for `scan`, `lint`, and offline `verify`. Live network probing and submission automation stay opt-in.
 
@@ -175,103 +172,12 @@ Use this only inside `hashgraph-online/ai-plugin-scanner`, where the action can 
 
 The registry payload mirrors the submission metadata used by HOL ecosystem automation, so the same scan can feed trust scoring, registry ingestion, badges, or awesome-list processing without reparsing the terminal output.
 
-### Score 80+ and auto-file an awesome-list submission issue
-
-When the scan reaches `80+` and does not trip the configured severity gate, the action opens or reuses a submission issue in `hashgraph-online/awesome-codex-plugins`. The issue body includes a machine-readable registry payload so downstream registry automation can ingest the same submission event.
-
-```yaml
-permissions:
-  contents: read
-
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Scan plugin and submit if eligible
-        id: scan
-        uses: hashgraph-online/ai-plugin-scanner-action@v1
-        with:
-          plugin_dir: "."
-          min_score: 80
-          fail_on_severity: high
-          submission_enabled: true
-          submission_score_threshold: 80
-          submission_token: ${{ secrets.AWESOME_CODEX_PLUGINS_TOKEN }}
-
-      - name: Show submission issue
-        if: steps.scan.outputs.submission_performed == 'true'
-        run: echo "${{ steps.scan.outputs.submission_issue_urls }}"
-```
-
-Use a fine-grained token with `issues:write` on `hashgraph-online/awesome-codex-plugins`. `submission_token` is required when `submission_enabled: true`. The action deduplicates by an exact hidden plugin URL marker in the issue body, so repeated pushes reuse the open submission issue instead of opening duplicates.
-
-### Markdown report as PR comment
-
-```yaml
-- uses: hashgraph-online/ai-plugin-scanner-action@v1
-  id: scan
-  with:
-    plugin_dir: "."
-    format: markdown
-    output: scan-report.md
-
-- name: Comment PR
-  uses: actions/github-script@v7
-  with:
-    script: |
-      const fs = require('fs');
-      const report = fs.readFileSync('scan-report.md', 'utf8');
-      github.rest.issues.createComment({
-        issue_number: context.issue.number,
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        body: report
-      });
-```
-
 ## Release Management
 
-- Keep the legacy compatibility slug alive for GitHub Marketplace and existing workflows.
-- Mirror the same action bundle, exact release tags, and floating `v1` tag into `hashgraph-online/ai-plugin-scanner-action` through `.github/workflows/sync-canonical-repo.yml`.
-- Configure `CANONICAL_ACTION_REPO_TOKEN` in this repository so the sync workflow can push into `hashgraph-online/ai-plugin-scanner-action`, publish autogenerated release notes there, and keep the canonical repo current.
-- Sync the install metadata files (`scanner-version.txt`, `cisco-version.txt`, and `pypi-attestations-version.txt`) with the action bundle so both published repos install the same reviewed scanner release.
-
-## Source of Truth
-
-The source bundle for this action lives in the main scanner repository under `action/`. Release artifacts from that repository should export a root-ready action bundle for the dedicated Marketplace repository.
-
-Direct edits in this legacy compatibility repository should stay limited to copy or metadata. Functional changes and release publication logic belong in `hashgraph-online/ai-plugin-scanner` so merges there can publish a matching action release automatically.
+- This canonical repository stays in lockstep with `hashgraph-online/hol-codex-plugin-scanner-action`.
+- The legacy repository mirrors the same action bundle and matching version tags here through the sync workflow.
+- Use `hashgraph-online/ai-plugin-scanner-action@v1` for new automation. The legacy slug stays supported for existing users.
 
 ## License
 
 [Apache-2.0](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
-
-## Mode-based workflow
-
-Set `mode` to one of `scan`, `lint`, `verify`, or `submit`.
-
-```yaml
-- uses: hashgraph-online/ai-plugin-scanner-action@v1
-  with:
-    mode: verify
-    plugin_dir: "."
-```
-
-For `submit` mode, point `plugin_dir` at one concrete plugin directory. Repository-mode discovery is supported for `scan`, `lint`, and `verify`, but `submit` intentionally remains single-plugin.
-
-For `scan` mode, set `upload_sarif: true` to emit and upload SARIF automatically instead of wiring a separate upload step by hand.
-
-## Container Distribution
-
-The scanner is also published as an OCI image for container-first environments:
-
-```bash
-docker run --rm \
-  -v "$PWD:/workspace" \
-  ghcr.io/hashgraph-online/ai-plugin-scanner:<version> \
-  scan /workspace --format text
-```
-
-The image installs the scanner from the reviewed source tree at release build time. It is separate from the Marketplace action so teams that prefer `docker://` or explicit `docker run` flows can use a pinned image without changing the secure default action path.

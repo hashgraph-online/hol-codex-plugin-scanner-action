@@ -18,12 +18,15 @@ If you discover a security vulnerability in this project, please report it respo
 
 ## Scope
 
-This repository is the Marketplace-facing GitHub Action bundle. Some issues belong here, and some belong in the source repository:
+This repository is the legacy compatibility GitHub Action bundle. Some issues belong here, some belong in the canonical action repository, and some belong in the source repository:
 
 - Action-repository scope:
   - incorrect `action.yml` metadata
   - Marketplace-specific packaging mistakes
   - broken README examples for the published action
+- Canonical action-repository scope:
+  - incorrect sync from the legacy compatibility repository into `hashgraph-online/ai-plugin-scanner-action`
+  - missing release tags or release notes in the canonical repository
 - Source-repository scope:
   - scanner findings, scoring, verification, or submission logic
   - CLI behavior
@@ -32,6 +35,10 @@ This repository is the Marketplace-facing GitHub Action bundle. Some issues belo
 Source repository:
 
 - [hashgraph-online/ai-plugin-scanner](https://github.com/hashgraph-online/ai-plugin-scanner)
+
+Canonical action repository:
+
+- [hashgraph-online/ai-plugin-scanner-action](https://github.com/hashgraph-online/ai-plugin-scanner-action)
 
 ## Security Best Practices
 
