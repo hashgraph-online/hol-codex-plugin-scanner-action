@@ -1,4 +1,4 @@
-name: "HOL AI Plugin Scanner"
+name: "AI Plugin Scanner"
 description: "Scan AI plugin repositories for security, publishability, and best-practice quality signals."
 author: "HOL"
 
@@ -24,7 +24,7 @@ inputs:
     required: false
     default: "default"
   config:
-    description: "Optional path to .codex-plugin-scanner.toml"
+    description: "Optional path to a scanner config file such as .plugin-scanner.toml"
     required: false
     default: ""
   baseline:
@@ -170,16 +170,16 @@ outputs:
     value: ${{ steps.scan.outputs.submission_issue_numbers }}
   action_exit_code:
     description: "Action execution exit code"
-    value: ${{ steps.normalized_outputs.outputs.action_exit_code }}
+    value: ${{ steps.scan.outputs.action_exit_code }}
   pr_comment_status:
     description: "PR comment status: created, updated, unchanged, skipped, or disabled"
-    value: ${{ steps.normalized_outputs.outputs.pr_comment_status }}
+    value: ${{ steps.scan.outputs.pr_comment_status }}
   pr_comment_id:
     description: "Created or updated PR comment id when available"
-    value: ${{ steps.normalized_outputs.outputs.pr_comment_id }}
+    value: ${{ steps.scan.outputs.pr_comment_id }}
   pr_comment_url:
     description: "Created or updated PR comment URL when available"
-    value: ${{ steps.normalized_outputs.outputs.pr_comment_url }}
+    value: ${{ steps.scan.outputs.pr_comment_url }}
 
 branding:
   icon: "check-circle"
@@ -234,16 +234,16 @@ runs:
           mkdir -p "$DIST_DIR"
 
           python3 -m pip install "pypi-attestations==${PYPI_ATTESTATIONS_VERSION}"
-          python3 -m pip download --only-binary=:all: --no-deps --dest "$DIST_DIR" "codex-plugin-scanner==${SCANNER_VERSION}"
+          python3 -m pip download --only-binary=:all: --no-deps --dest "$DIST_DIR" "plugin-scanner==${SCANNER_VERSION}"
 
           DIST_BASENAME="$(
-            DIST_DIR="$DIST_DIR" python3 -c "import os; from pathlib import Path; dist_dir = Path(os.environ['DIST_DIR']); candidates = sorted(dist_dir.glob('codex_plugin_scanner-*.whl')); expected = len(candidates) == 1; print(candidates[0].name) if expected else (_ for _ in ()).throw(SystemExit(f'Expected exactly one downloaded scanner wheel, found {len(candidates)}'))"
+            DIST_DIR="$DIST_DIR" python3 -c "import os; from pathlib import Path; dist_dir = Path(os.environ['DIST_DIR']); candidates = sorted(dist_dir.glob('plugin_scanner-*.whl')); expected = len(candidates) == 1; print(candidates[0].name) if expected else (_ for _ in ()).throw(SystemExit(f'Expected exactly one downloaded scanner wheel, found {len(candidates)}'))"
           )"
 
           if ! python3 -m pypi_attestations verify pypi \
             --repository "$SCANNER_REPOSITORY" \
             "pypi:${DIST_BASENAME}"; then
-            echo "Failed to verify PyPI provenance for codex-plugin-scanner==${SCANNER_VERSION}." >&2
+            echo "Failed to verify PyPI provenance for plugin-scanner==${SCANNER_VERSION}." >&2
             exit 1
           fi
 
@@ -290,15 +290,6 @@ runs:
         PR_COMMENT_MAX_FINDINGS: ${{ inputs.pr_comment_max_findings }}
         GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
       run: python3 -m codex_plugin_scanner.action_runner
-
-    - name: Normalize action outputs
-      id: normalized_outputs
-      shell: bash
-      run: |
-        echo "action_exit_code=0" >> "$GITHUB_OUTPUT"
-        echo "pr_comment_status=skipped" >> "$GITHUB_OUTPUT"
-        echo "pr_comment_id=" >> "$GITHUB_OUTPUT"
-        echo "pr_comment_url=" >> "$GITHUB_OUTPUT"
 
     - name: Upload SARIF
       if: ${{ inputs.upload_sarif == 'true' && inputs.mode == 'scan' && steps.scan.outputs.report_path != '' }}

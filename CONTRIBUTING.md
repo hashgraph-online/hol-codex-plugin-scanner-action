@@ -1,4 +1,4 @@
-# Contributing
+# Contributing to AI Plugin Scanner Action
 
 Thanks for helping maintain the Marketplace-facing bundle for `plugin-scanner` (legacy package alias: `codex-plugin-scanner`).
 
@@ -31,7 +31,7 @@ Changes that should usually happen in the source repository first:
 Before opening a PR:
 
 1. Keep the diff focused on the action repository surface.
-2. Make sure README examples use the real slug: `hashgraph-online/hol-codex-plugin-scanner-action@v1`.
+2. Make sure README examples use the currently published slug: `hashgraph-online/hol-codex-plugin-scanner-action@v1`.
 3. If `action.yml` changes, confirm the inputs and outputs documented in [`README.md`](./README.md) still match.
 4. If release/version copy changes, keep it aligned with the latest published scanner release and Marketplace listing.
 

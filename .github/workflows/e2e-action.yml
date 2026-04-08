@@ -23,7 +23,7 @@ jobs:
       - name: Checkout scanner fixtures
         uses: actions/checkout@v4
         with:
-          repository: hashgraph-online/codex-plugin-scanner
+          repository: hashgraph-online/ai-plugin-scanner
           path: scanner-repo
 
       - name: Run action in scan mode (real runner)
