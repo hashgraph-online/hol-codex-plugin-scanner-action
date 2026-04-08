@@ -8,11 +8,11 @@ This repository is the legacy compatibility repository for the GitHub Action. Th
 
 - [`hashgraph-online/ai-plugin-scanner`](https://github.com/hashgraph-online/ai-plugin-scanner)
 
-The preferred action slug now lives in:
+The legacy compatibility slug remains available at:
 
-- [`hashgraph-online/ai-plugin-scanner-action`](https://github.com/hashgraph-online/ai-plugin-scanner-action)
+- [`hashgraph-online/hol-codex-plugin-scanner-action`](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)
 
-Most functional changes should start in the source repository and then be published into this repository and the canonical action repository through the release sync workflow.
+Most functional changes should start in the source repository and then be published into this action repository and the canonical action repository through the release sync workflow.
 
 ## What changes belong here
 
@@ -44,7 +44,7 @@ Before opening a PR:
 - Use a focused title and description.
 - Include screenshots when the change is mainly Marketplace or README presentation.
 - Link the related source-repo PR when the update was generated from `ai-plugin-scanner`.
-- Keep `README.canonical.md` aligned with any user-facing changes that should flow into `hashgraph-online/ai-plugin-scanner-action`.
+- Keep the canonical repo aligned with any user-facing changes that should flow into `hashgraph-online/ai-plugin-scanner-action`.
 
 ## Security
 
