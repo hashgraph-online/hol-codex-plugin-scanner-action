@@ -3,22 +3,22 @@
 [![Latest Release](https://img.shields.io/github/v/release/hashgraph-online/hol-codex-plugin-scanner-action?display_name=tag)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action/releases/latest)
 [![Marketplace Repository](https://img.shields.io/badge/github-marketplace_repo-0A84FF)](https://github.com/hashgraph-online/ai-plugin-scanner-action)
 [![Compatibility Alias](https://img.shields.io/badge/compat-hol--codex--plugin--scanner--action-6b7280)](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)
-[![Source of Truth](https://img.shields.io/badge/source-ai--plugin--scanner-111827)](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
+[![Source of Truth](https://img.shields.io/badge/source-hol--guard-111827)](https://github.com/hashgraph-online/hol-guard/tree/main/action)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hashgraph-online/hol-guard/blob/main/LICENSE)
 
-| ![Hashgraph Online Logo](https://hol.org/brand/Logo_Whole_Dark.png) | Marketplace-ready GitHub Action for scanning AI plugin repositories across Codex, Claude, Gemini, and OpenCode ecosystems for security, publishability, runtime readiness, and trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/ai-plugin-scanner-action/releases/latest)<br>[Marketplace Repository](https://github.com/hashgraph-online/ai-plugin-scanner-action)<br>[Compatibility Alias](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/ai-plugin-scanner/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/ai-plugin-scanner/issues) |
+| ![Hashgraph Online Logo](https://hol.org/brand/Logo_Whole_Dark.png) | Marketplace-ready GitHub Action for scanning AI plugin repositories across Codex, Claude, Gemini, and OpenCode ecosystems for security, publishability, runtime readiness, and trust signals. The action emits structured reports, SARIF, policy results, and submission metadata while staying aligned to the main scanner release train.<br><br>[Latest Release](https://github.com/hashgraph-online/ai-plugin-scanner-action/releases/latest)<br>[Marketplace Repository](https://github.com/hashgraph-online/ai-plugin-scanner-action)<br>[Compatibility Alias](https://github.com/hashgraph-online/hol-codex-plugin-scanner-action)<br>[Scanner Source of Truth](https://github.com/hashgraph-online/hol-guard/tree/main/action)<br>[Report an Issue](https://github.com/hashgraph-online/hol-guard/issues) |
 | :--- | :--- |
 
-This repository is the canonical Marketplace-facing wrapper for the scanner action. The main scanner repo remains the source of truth, while this published action bundle keeps the required root `action.yml` layout for GitHub Marketplace.
+This repository is the canonical Marketplace-facing wrapper for the scanner action. The hol-guard repository remains the source of truth, while this published action bundle keeps the required root `action.yml` layout for GitHub Marketplace.
 
 The legacy action slug `hashgraph-online/hol-codex-plugin-scanner-action@v1` remains supported as a compatibility alias for existing workflows. New integrations should use `hashgraph-online/ai-plugin-scanner-action@v1`.
 
-The default Marketplace install path uses an exact `plugin-scanner` PyPI release, verifies its PyPI provenance against `hashgraph-online/ai-plugin-scanner`, and installs `cisco-ai-skill-scanner` at the exact version pinned in `cisco-version.txt`. After installation, the default `scan`, `lint`, and offline `verify` paths operate on local repository content only. Live network probing and submission automation remain explicit opt-in features.
+The default Marketplace install path uses an exact `plugin-scanner` PyPI release, verifies its PyPI provenance against `hashgraph-online/hol-guard`, and only then installs it. After installation, the default `scan`, `lint`, and offline `verify` paths operate on local repository content only. Live network probing and submission automation remain explicit opt-in features.
 
 Advanced distribution paths are available when you need them:
 
 - `install_source: local` is the explicit dogfood path for `uses: ./action` inside the source repo.
-- `ghcr.io/hashgraph-online/ai-plugin-scanner` is the container distribution for enterprise runners that prefer a reviewed OCI image over runtime package installation.
+- `ghcr.io/hashgraph-online/hol-guard` is the container distribution for enterprise runners that prefer a reviewed OCI image over runtime package installation.
 
 ## Usage
 
@@ -51,6 +51,7 @@ Advanced distribution paths are available when you need them:
 | `fail_on_severity` | Fail on findings at or above this severity: `none`, `critical`, `high`, `medium`, `low`, `info` | `none` |
 | `cisco_skill_scan` | Cisco skill-scanner mode: `auto`, `on`, `off` | `auto` |
 | `cisco_policy` | Cisco policy preset: `permissive`, `balanced`, `strict` | `balanced` |
+| `install_cisco` | Install the opt-in Cisco skill-scanner dependency used by this repo | `false` |
 | `install_source` | Package install source: `pypi` for the reviewed release path, or `local` for source-repo dogfooding | `pypi` |
 | `submission_enabled` | Open submission issues for awesome-list and registry automation when the plugin clears the submission threshold | `false` |
 | `submission_score_threshold` | Minimum score required before a submission issue is created | `80` |
@@ -140,11 +141,12 @@ This `plugin_dir: "."` pattern is correct for both single-plugin repositories an
     plugin_dir: "."
     cisco_skill_scan: on
     cisco_policy: strict
+    install_cisco: true
 ```
 
 ### Dogfood the source-repo action bundle
 
-Use this only inside `hashgraph-online/ai-plugin-scanner`, where the action can install the adjacent source tree directly.
+Use this only inside `hashgraph-online/hol-guard`, where the action can install the adjacent source tree directly.
 
 ```yaml
 - uses: ./action
@@ -247,7 +249,7 @@ Direct edits in published action repositories should stay limited to Marketplace
 
 ## License
 
-[Apache-2.0](https://github.com/hashgraph-online/ai-plugin-scanner/blob/main/LICENSE)
+[Apache-2.0](https://github.com/hashgraph-online/hol-guard/blob/main/LICENSE)
 
 ## Mode-based workflow
 
@@ -271,7 +273,7 @@ The scanner is also published as an OCI image for container-first environments:
 ```bash
 docker run --rm \
   -v "$PWD:/workspace" \
-  ghcr.io/hashgraph-online/ai-plugin-scanner:<version> \
+  ghcr.io/hashgraph-online/hol-guard:<version> \
   scan /workspace --format text
 ```
 
