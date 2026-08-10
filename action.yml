@@ -44,7 +44,7 @@ inputs:
     required: false
     default: "ai-plugin-scanner"
   write_step_summary:
-    description: "Write a concise markdown summary to the GitHub Actions job summary"
+    description: "Write the full report inline for markdown scans, otherwise write a concise GitHub Actions job summary"
     required: false
     default: "true"
   registry_payload_output:
@@ -283,7 +283,7 @@ runs:
         BASELINE: ${{ inputs.baseline }}
         ONLINE: ${{ inputs.online }}
         UPLOAD_SARIF: ${{ inputs.upload_sarif }}
-        WRITE_STEP_SUMMARY: ${{ inputs.write_step_summary }}
+        WRITE_STEP_SUMMARY: ${{ inputs.write_step_summary == 'true' && inputs.format != 'markdown' }}
         REGISTRY_PAYLOAD_OUTPUT: ${{ inputs.registry_payload_output }}
         MIN_SCORE: ${{ inputs.min_score }}
         FAIL_ON: ${{ inputs.fail_on_severity }}
@@ -306,6 +306,20 @@ runs:
         PYTHONNOUSERSITE: "1"
         PYTHONSAFEPATH: "1"
       run: python3 -P -m codex_plugin_scanner.action_runner
+
+    - name: Publish Markdown report to job summary
+      if: ${{ inputs.write_step_summary == 'true' && inputs.mode == 'scan' && inputs.format == 'markdown' && steps.scan.outputs.report_path != '' }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ steps.scan.outputs.report_path }}
+      run: |
+        set -euo pipefail
+        if [ ! -s "$REPORT_PATH" ]; then
+          echo "Markdown report was requested for the job summary but was not generated: $REPORT_PATH" >&2
+          exit 1
+        fi
+        cat "$REPORT_PATH" >> "$GITHUB_STEP_SUMMARY"
+        printf '\n' >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload SARIF
       if: ${{ inputs.upload_sarif == 'true' && inputs.mode == 'scan' && steps.scan.outputs.report_path != '' }}
